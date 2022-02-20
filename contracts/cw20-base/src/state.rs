@@ -19,7 +19,7 @@ pub struct TokenInfo {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct MinterData {
     pub minter: Addr,
-    /// cap is how many more tokens can be issued by the minter
+    /// cap is how many more tokens can be issued by the mint_authority
     pub cap: Option<Uint128>,
 }
 
