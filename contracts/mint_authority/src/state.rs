@@ -17,4 +17,6 @@ pub struct MintAuthorityInfo {
 }
 
 
+
+
 pub const MINT_AUTHORITY_INFO: Item<MintAuthorityInfo> = Item::new("mint_authority_info");

@@ -4,87 +4,28 @@ use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
 };
 
-use cw2::set_contract_version;
 use cw20::{
     BalanceResponse, Cw20Coin, Cw20ReceiveMsg, DownloadLogoResponse, EmbeddedLogo, Logo, LogoInfo,
     MarketingInfoResponse, MinterResponse, TokenInfoResponse,
 };
 
+
+
 use crate::allowances::{
     execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
     execute_transfer_from, query_allowance,
 };
-use crate::enumerable::{query_all_accounts, query_all_allowances};
+
+//Andisheh
+use cw20::{Cw20ReceiveMsg};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-//use crate::state::{MinterData, TokenInfo, BALANCES, LOGO, MARKETING_INFO, TOKEN};
+
+//Andisheh
 use crate::state::{COLLATERAL};
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw20-base";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+//TODO make CW2 compliant
 
-const LOGO_SIZE_CAP: usize = 5 * 1024;
 
-/// Checks if data starts with XML preamble
-fn verify_xml_preamble(data: &[u8]) -> Result<(), ContractError> {
-    // The easiest way to perform this check would be just match on regex, however regex
-    // compilation is heavy and probably not worth it.
-
-    let preamble = data
-        .split_inclusive(|c| *c == b'>')
-        .next()
-        .ok_or(ContractError::InvalidXmlPreamble {})?;
-
-    const PREFIX: &[u8] = b"<?xml ";
-    const POSTFIX: &[u8] = b"?>";
-
-    if !(preamble.starts_with(PREFIX) && preamble.ends_with(POSTFIX)) {
-        Err(ContractError::InvalidXmlPreamble {})
-    } else {
-        Ok(())
-    }
-
-    // Additionally attributes format could be validated as they are well defined, as well as
-    // comments presence inside of preable, but it is probably not worth it.
-}
-
-/// Validates XML logo
-fn verify_xml_logo(logo: &[u8]) -> Result<(), ContractError> {
-    verify_xml_preamble(logo)?;
-
-    if logo.len() > LOGO_SIZE_CAP {
-        Err(ContractError::LogoTooBig {})
-    } else {
-        Ok(())
-    }
-}
-
-/// Validates png logo
-fn verify_png_logo(logo: &[u8]) -> Result<(), ContractError> {
-    // PNG header format:
-    // 0x89 - magic byte, out of ASCII table to fail on 7-bit systems
-    // "PNG" ascii representation
-    // [0x0d, 0x0a] - dos style line ending
-    // 0x1a - dos control character, stop displaying rest of the file
-    // 0x0a - unix style line ending
-    const HEADER: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
-    if logo.len() > LOGO_SIZE_CAP {
-        Err(ContractError::LogoTooBig {})
-    } else if !logo.starts_with(&HEADER) {
-        Err(ContractError::InvalidPngHeader {})
-    } else {
-        Ok(())
-    }
-}
-
-/// Checks if passed logo is correct, and if not, returns an error
-fn verify_logo(logo: &Logo) -> Result<(), ContractError> {
-    match logo {
-        Logo::Embedded(EmbeddedLogo::Svg(logo)) => verify_xml_logo(&logo),
-        Logo::Embedded(EmbeddedLogo::Png(logo)) => verify_png_logo(&logo),
-        Logo::Url(_) => Ok(()), // Any reasonable url validation would be regex based, probably not worth it
-    }
-}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -207,15 +148,13 @@ pub fn execute(
             marketing,
         } => execute_update_marketing(deps, env, info, project, description, marketing),
         ExecuteMsg::UploadLogo(logo) => execute_upload_logo(deps, env, info, logo),
-        ExecuteMsg::AddCoinCollateral{} => execute_add_coin_collateral(deps, env, info)
-
-
-
+        ExecuteMsg::ReceiveNative{} => execute_receive_native(deps, env, info),
+        ExecuteMsg::ReceiveCw20(msg) => execute_receive_cw20(deps, env, info, msg),
     }
 
 
 }
-pub fn execute_add_coin_collateral(
+pub fn execute_receive_native(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -231,7 +170,63 @@ pub fn execute_add_coin_collateral(
         )
     }
 }
-    pub fn execute_transfer(
+
+pub fn execute_receive_cw20(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> StdResult<Response> {
+    let passed_asset: Asset = Asset {
+        info: AssetInfo::Token {
+            contract_addr: info.sender.to_string(),
+        },
+        amount: cw20_msg.amount,
+    };
+
+    match from_binary(&cw20_msg.msg) {
+        Ok(Cw20HookMsg::OpenPosition {
+               asset_info,
+               collateral_ratio,
+               short_params,
+           }) => {
+            let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
+            open_position(
+                deps,
+                env,
+                cw20_sender,
+                passed_asset,
+                asset_info,
+                collateral_ratio,
+                short_params,
+            )
+        }
+        Ok(Cw20HookMsg::Deposit { position_idx }) => {
+            let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
+            deposit(deps, cw20_sender, position_idx, passed_asset)
+        }
+        Ok(Cw20HookMsg::Burn { position_idx }) => {
+            let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
+            burn(deps, env, cw20_sender, position_idx, passed_asset)
+        }
+        Ok(Cw20HookMsg::Auction { position_idx }) => {
+            let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
+            auction(deps, env, cw20_sender, position_idx, passed_asset)
+        }
+        Err(_) => Err(StdError::generic_err("invalid cw20 hook message")),
+    }
+}
+
+
+
+
+
+
+
+
+
+
+pub fn execute_transfer(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,

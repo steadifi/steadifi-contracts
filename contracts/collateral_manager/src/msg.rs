@@ -1,5 +1,4 @@
 use cosmwasm_std::{StdError, StdResult, Uint128};
-use cw20::{Cw20Coin, Logo, MinterResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -71,10 +70,31 @@ fn is_valid_symbol(symbol: &str) -> bool {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg{
-    AddCoinCollateral{}, //uluna and uusd collateral
-
+    ReceiveNative{}, //uluna, uusd and all Luna native tokens
+    ReceiveCw20(Cw20ReceiveMsg), //Other cw20 tokens
 }
 
+
+//////////////////////////////////////////////
+//If sending a cw20 token to the collateral manager a message needs to come as well
+// to specify what this cw20 toek is for
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Cw20HookMsg {
+    // Create position to meet collateral ratio
+    OpenPosition {
+        asset_info: AssetInfo,
+        collateral_ratio: Decimal,
+        short_params: Option<ShortParams>,
+    },
+    /// Deposit more collateral
+    Deposit { position_idx: Uint128 },
+    /// Convert specified asset amount and send back to user
+    Burn { position_idx: Uint128 },
+    /// Buy discounted collateral from the contract with their asset token
+    /// Used in liquidations
+    Liquidation { position_idx: Uint128 },
+}
 
 
 
