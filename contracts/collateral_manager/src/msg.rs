@@ -1,7 +1,7 @@
 use cosmwasm_std::{StdError, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
+use easylend::{AssetInfo}
 //pub use cw20::Cw20ExecuteMsg as ExecuteMsg;
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
@@ -66,18 +66,36 @@ fn is_valid_symbol(symbol: &str) -> bool {
     }
     true
 }
+pub struct InstantiateMsg{
+
+
+
+}
+
+
+
+
+
+
 //////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg{
     ReceiveNative{}, //uluna, uusd and all Luna native tokens
     ReceiveCw20(Cw20ReceiveMsg), //Other cw20 tokens
+    WhitelistCollateral(CollateralWhitelistMsg),
+    WhitelistFuture{
+        future_name: String,
+        address: String,
+    }
+
+
 }
 
 
 //////////////////////////////////////////////
 //If sending a cw20 token to the collateral manager a message needs to come as well
-// to specify what this cw20 toek is for
+// to specify what this cw20 token is for
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
@@ -95,6 +113,22 @@ pub enum Cw20HookMsg {
     /// Used in liquidations
     Liquidation { position_idx: Uint128 },
 }
+
+//////////////////////////////////////////////
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CollateralWhitelistMsg {
+    AddWhitelist{
+        asset_name: String, //Name you want to give to this asset
+        asset_info: AssetInfo, //Information
+    },
+    RemoveWhitelist{
+        asset_name: String, // name of asset to remove
+    },
+}
+
+//////////////////////////////////////////////
+// COllateral whitelist message
 
 
 

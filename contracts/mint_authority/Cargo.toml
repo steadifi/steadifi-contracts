@@ -2,8 +2,8 @@
 name = "mint_authority"
 version = "0.0.0"
 authors = ["Andisheh Amrollahi"]
-edition = "2021"
-description = "Mint authority in EasyLend"
+edition = "2018"
+description = "Mint authority for future assets in SteadiFi"
 license = "Apache-2.0"
 repository = "https://github.com/CosmWasm/cw-plus"
 homepage = "https://cosmwasm.com"

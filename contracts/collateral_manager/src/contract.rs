@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 
 use cw20::{
-    BalanceResponse, Cw20Coin, Cw20ReceiveMsg, DownloadLogoResponse, EmbeddedLogo, Logo, LogoInfo,
+    BalanceResponse, Cw20Coin, DownloadLogoResponse, EmbeddedLogo, Logo, LogoInfo,
     MarketingInfoResponse, MinterResponse, TokenInfoResponse,
 };
 
@@ -19,10 +19,11 @@ use crate::allowances::{
 //Andisheh
 use cw20::{Cw20ReceiveMsg};
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, CollateralWhitelistMsg};
+use crate::msg::CollateralWhitelistMsg::RemoveWhitelist;
 
 //Andisheh
-use crate::state::{COLLATERAL};
+use crate::state::{WHITELIST_COLLATERAL, WHITELIST_FUTUREASSET, COLLATERAL, BORROW, ORACLE_ADDRESS, OWNER};
 //TODO make CW2 compliant
 
 
@@ -34,73 +35,10 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    // check valid token info
-    msg.validate()?;
-    // create initial accounts
-    let total_supply = create_accounts(&mut deps, &msg.initial_balances)?;
-
-    if let Some(limit) = msg.get_cap() {
-        if total_supply > limit {
-            return Err(StdError::generic_err("Initial supply greater than cap").into());
-        }
-    }
-
-    let mint = match msg.mint {
-        Some(m) => Some(MinterData {
-            minter: deps.api.addr_validate(&m.minter)?,
-            cap: m.cap,
-        }),
-        None => None,
-    };
-
-    // store token info
-    let data = TokenInfo {
-        name: msg.name,
-        symbol: msg.symbol,
-        decimals: msg.decimals,
-        total_supply,
-        mint,
-    };
-    TOKEN_INFO.save(deps.storage, &data)?;
-
-    if let Some(marketing) = msg.marketing {
-        let logo = if let Some(logo) = marketing.logo {
-            verify_logo(&logo)?;
-            LOGO.save(deps.storage, &logo)?;
-
-            match logo {
-                Logo::Url(url) => Some(LogoInfo::Url(url)),
-                Logo::Embedded(_) => Some(LogoInfo::Embedded),
-            }
-        } else {
-            None
-        };
-
-        let data = MarketingInfoResponse {
-            project: marketing.project,
-            description: marketing.description,
-            marketing: marketing
-                .marketing
-                .map(|addr| deps.api.addr_validate(&addr))
-                .transpose()?,
-            logo,
-        };
-        MARKETING_INFO.save(deps.storage, &data)?;
-    }
-
+    OWNER.save(deps.storage, &msg.sender)?;
     Ok(Response::default())
 }
 
-pub fn create_accounts(deps: &mut DepsMut, accounts: &[Cw20Coin]) -> StdResult<Uint128> {
-    let mut total_supply = Uint128::zero();
-    for row in accounts {
-        let address = deps.api.addr_validate(&row.address)?;
-        BALANCES.save(deps.storage, &address, &row.amount)?;
-        total_supply += row.amount;
-    }
-    Ok(total_supply)
-}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -148,12 +86,43 @@ pub fn execute(
             marketing,
         } => execute_update_marketing(deps, env, info, project, description, marketing),
         ExecuteMsg::UploadLogo(logo) => execute_upload_logo(deps, env, info, logo),
+
+        //Andisheh
         ExecuteMsg::ReceiveNative{} => execute_receive_native(deps, env, info),
         ExecuteMsg::ReceiveCw20(msg) => execute_receive_cw20(deps, env, info, msg),
+        ExecuteMsg::WhitelistCollateral(msg) => execute_whitelist_collateral(deps, env, info, msg),
+        ExecuteMsg::WhitelistFutureAsset(future_name, address) =>
+                    execute_whitelist_future_asset(deps, env, info, future_name, address),
+
     }
 
 
 }
+
+pub fn execute_whitelist_collateral(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: CollateralWhitelistMsg
+) -> Result<Response, ContractError>
+{
+    contract_owner =  OWNER.load(deps.storage)?;
+    if msg.sender != contract_owner {
+        return Err(ContractError::Unauthorized {})
+    }
+    match msg{
+        AddWhitelist{asset_name, asset_info} => {
+
+        },
+        RemoveWhitelist{ asset_name } => {
+
+        },
+    }
+
+
+   Ok(Response::default())
+}
+
 pub fn execute_receive_native(
     deps: DepsMut,
     env: Env,
