@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
+    Addr, from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
 };
 
 use cw20::{
@@ -18,9 +18,12 @@ use crate::allowances::{
 
 //Andisheh
 use cw20::{Cw20ReceiveMsg};
+use steadifi::AssetInfo;
+use crate::ContractError::Std;
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, CollateralWhitelistMsg};
-use crate::msg::CollateralWhitelistMsg::RemoveWhitelist;
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, CollateralWhitelistMsg,
+                Cw20HookMsg};
+
 
 //Andisheh
 use crate::state::{WHITELIST_COLLATERAL, WHITELIST_FUTUREASSET, COLLATERAL, BORROW, ORACLE_ADDRESS, OWNER};
@@ -88,56 +91,42 @@ pub fn execute(
         ExecuteMsg::UploadLogo(logo) => execute_upload_logo(deps, env, info, logo),
 
         //Andisheh
-        ExecuteMsg::ReceiveNative{} => execute_receive_native(deps, env, info),
-        ExecuteMsg::ReceiveCw20(msg) => execute_receive_cw20(deps, env, info, msg),
+        ExecuteMsg::NativeDeposit() => execute_native_deposit(deps, env, info),
+        ExecuteMsg::Receive(msg) => execute_receive_cw20(deps, env, info, msg),
         ExecuteMsg::WhitelistCollateral(msg) => execute_whitelist_collateral(deps, env, info, msg),
-        ExecuteMsg::WhitelistFutureAsset(future_name, address) =>
-                    execute_whitelist_future_asset(deps, env, info, future_name, address),
 
     }
 
 
 }
-
-pub fn execute_whitelist_collateral(
+/// Native Deposits
+pub fn execute_native_deposit(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
-    msg: CollateralWhitelistMsg
 ) -> Result<Response, ContractError>
 {
-    contract_owner =  OWNER.load(deps.storage)?;
-    if msg.sender != contract_owner {
-        return Err(ContractError::Unauthorized {})
-    }
-    match msg{
-        AddWhitelist{asset_name, asset_info} => {
-
-        },
-        RemoveWhitelist{ asset_name } => {
-
-        },
-    }
-
-
-   Ok(Response::default())
-}
-
-pub fn execute_receive_native(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-) -> Result<Response, ContractError> {
-
     for coin in info.funds.into_iter() {
-        COLLATERAL.update(
-            deps.storage,
-            (&info.sender, coin.denom.as_str()),
-            |balance: Option<Uint128>| -> StdResult<_> {
-                Ok(balance.unwrap_or_default().checked_add(amount)?)
-            },
-        )
+        // Check to see if token is on whitelist
+        let collateral_info = WHITELIST_COLLATERAL.may_load(&deps.storage, coin.denom.clone())?;
+        match collateral_info {
+            Some(..) => {
+                COLLATERAL.update(
+                    deps.storage,
+                    (&info.sender, coin.denom),
+                    |balance: Option<Uint128>| -> StdResult<_> {
+                        Ok(balance.unwrap_or_default().checked_add(amount)?)
+                    },
+                )
+            }
+            None => {
+                return Err(ContractError::NotWhitelisted{}) ;
+            }
+        }
+
     }
+    // TODO: A more informative response
+    OK(Response::default())
 }
 
 pub fn execute_receive_cw20(
@@ -146,45 +135,120 @@ pub fn execute_receive_cw20(
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
 ) -> StdResult<Response> {
-    let passed_asset: Asset = Asset {
-        info: AssetInfo::Token {
-            contract_addr: info.sender.to_string(),
-        },
-        amount: cw20_msg.amount,
-    };
 
     match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::OpenPosition {
-               asset_info,
-               collateral_ratio,
-               short_params,
-           }) => {
+
+        Ok(Cw20HookMsg::Deposit {asset_name}) => {
             let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            open_position(
-                deps,
-                env,
-                cw20_sender,
-                passed_asset,
-                asset_info,
-                collateral_ratio,
-                short_params,
-            )
+            deposit(deps, cw20_sender, info.sender, cw20_msg.amount, asset_name)
         }
-        Ok(Cw20HookMsg::Deposit { position_idx }) => {
-            let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            deposit(deps, cw20_sender, position_idx, passed_asset)
-        }
-        Ok(Cw20HookMsg::Burn { position_idx }) => {
-            let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            burn(deps, env, cw20_sender, position_idx, passed_asset)
-        }
-        Ok(Cw20HookMsg::Auction { position_idx }) => {
-            let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            auction(deps, env, cw20_sender, position_idx, passed_asset)
-        }
+
         Err(_) => Err(StdError::generic_err("invalid cw20 hook message")),
     }
 }
+
+pub fn deposit(
+    deps: DepsMut,
+    sender: Addr,
+    cw20_contract_addr: Addr,
+    amount: Uint128,
+    asset_name: String,
+) -> Result<Response, ContractError> {
+
+    if let Some(asset_info) = WHITELIST_COLLATERAL.may_load(&deps.storage, asset_name.clone())? {
+        match asset_info {
+            AssetInfo::CW20Token { contract_addr, ..} => {
+                if cw20_contract_addr != contract_addr {
+                    return Err(StdError(format!("Address on whitelist and sender contract address for cw20 asset {} do not match", asset_name))) ;
+                }
+                COLLATERAL.update(
+                    deps.storage,
+                    (&sender, asset_name),
+                    |balance: Option<Uint128>| -> StdResult<_> {
+                        Ok(balance.unwrap_or_default().checked_add(amount)?)
+                    }
+                )
+
+            }
+            AssetInfo::FutureAssetToken { contract_addr, ..} => {
+                if cw20_contract_addr != contract_addr {
+                    return Err(StdError(format!("Address on whitelist and sender contract address for cw20 asset {} do not match", asset_name))) ;
+                }
+                // More complicated since the asset may be borrowed .....
+
+            }
+            AssetInfo::NativeToken {..} => {
+                return Err(StdError(format!("Sent a CW20 token with name \"{}\" which corresponds to a native token", asset_name))) ;
+            }
+        }
+    } else{
+            return Err(ContractError::NotWhitelisted{}) ;
+    }
+
+
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "deposit"),
+        attr("position_idx", position_idx.to_string()),
+        attr("deposit_amount", collateral.to_string()),
+    ]))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub fn execute_whitelist_collateral(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    msg: CollateralWhitelistMsg
+) -> Result<Response, ContractError>
+{
+    contract_owner =  OWNER.load(&deps.storage)?;
+    if info.sender != contract_owner {
+        return Err(ContractError::Unauthorized {})
+    }
+    match msg{
+        AddWhitelist{asset_name, asset_info} => {
+            let asset = WHITELIST_COLLATERAL.may_load(&deps.storage, asset_name.as_str())?;
+            match asset {
+                Some(..) => {
+                    return Err(ContractError::AlreadyOnWhitelist{}) ;
+                }
+                None => {
+                    WHITELIST_COLLATERAL.save(&deps.storage, asset_name.as_str(), asset_info())? ;
+                }
+            }
+        },
+        RemoveWhitelist{ asset_name } => {
+            WHITELIST_COLLATERAL.remove(asset_name.as_str()) ;
+        },
+    }
+
+    //TODO: A more informative response
+   Ok(Response::default())
+}
+
+
+
 
 
 

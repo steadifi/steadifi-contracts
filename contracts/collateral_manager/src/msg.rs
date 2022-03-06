@@ -1,9 +1,9 @@
-use cosmwasm_std::{StdError, StdResult, Uint128};
+use cosmwasm_std::{StdError, StdResult, Uint128, Decimal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use easylend::{AssetInfo}
-//pub use cw20::Cw20ExecuteMsg as ExecuteMsg;
-
+use steadifi::{AssetInfo} ;
+use cw20::{Cw20ReceiveMsg} ;
+use cosmwasm_std{Addr} ;
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
 pub struct InstantiateMarketingInfo {
     pub project: Option<String>,
@@ -81,13 +81,19 @@ pub struct InstantiateMsg{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg{
-    ReceiveNative{}, //uluna, uusd and all Luna native tokens
-    ReceiveCw20(Cw20ReceiveMsg), //Other cw20 tokens
-    WhitelistCollateral(CollateralWhitelistMsg),
+    NativeDeposit{}, // Deposit native tokens as collateral
+    NativeSettle{},  // Settle native borrow only available 7 days prior expiry of contract
+
+
+    Receive(Cw20ReceiveMsg), //Other cw20 tokens
+
+    WhitelistCollateral(CollateralWhitelistMsg), // Add or remove assets from collateral whitelist
     WhitelistFuture{
         future_name: String,
         address: String,
-    }
+    },
+    Borrow{} , // Mint future asset and send it to the user
+    WithdrawCollateral{}, // Withdraw collateral
 
 
 }
@@ -96,22 +102,16 @@ pub enum ExecuteMsg{
 //////////////////////////////////////////////
 //If sending a cw20 token to the collateral manager a message needs to come as well
 // to specify what this cw20 token is for
+// Thi shook message is in the Binary of the Cw20ReceiveMsg
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
-    // Create position to meet collateral ratio
-    OpenPosition {
-        asset_info: AssetInfo,
-        collateral_ratio: Decimal,
-        short_params: Option<ShortParams>,
-    },
     /// Deposit more collateral
-    Deposit { position_idx: Uint128 },
-    /// Convert specified asset amount and send back to user
-    Burn { position_idx: Uint128 },
-    /// Buy discounted collateral from the contract with their asset token
-    /// Used in liquidations
-    Liquidation { position_idx: Uint128 },
+    Deposit { asset_name: String},
+    /// Settle Loan - Only possible 7 days prior to expiry of contract
+    Settle { asset_name: String },
+    /// Liquidate Under-collaterlaized accounts or accounts that have not settled debt after expiry date
+    Liquidate {liquidation_msg: LiquidationMsg},
 }
 
 //////////////////////////////////////////////
@@ -128,8 +128,16 @@ pub enum CollateralWhitelistMsg {
 }
 
 //////////////////////////////////////////////
-// COllateral whitelist message
-
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum  ReceiveNativeMsg{
+    /// Deposit more collateral
+    Deposit { asset_name: String},
+    /// Settle Loan - Only possible 7 days prior to expiry of contract
+    Settle { asset_name: String },
+    /// Liquidate Under-collaterlaized accounts or accounts that have not settled debt after expiry date
+    Liquidate {liquidation_msg: LiquidationMsg},
+}
 
 
 

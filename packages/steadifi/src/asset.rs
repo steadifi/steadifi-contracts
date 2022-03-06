@@ -19,7 +19,7 @@ pub enum AssetInfo {
         oracle_addr: Addr,
     },
     FutureAssetToken{
-        mint_addr: Addr,
+        contract_addr: Addr,
         ratio: Decimal,
         pool_oracle_addr: Addr,
         underlying_oracle_addr: Addr
