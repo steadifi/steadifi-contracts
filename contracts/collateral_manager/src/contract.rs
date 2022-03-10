@@ -18,15 +18,11 @@ use crate::allowances::{
 
 //Andisheh
 use cw20::{Cw20ReceiveMsg};
-use steadifi::AssetInfo;
-use crate::ContractError::Std;
+use steadifi::{AssetInfo, AssetInfoValidated};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, CollateralWhitelistMsg,
                 Cw20HookMsg};
-
-
-//Andisheh
-use crate::state::{WHITELIST_COLLATERAL, WHITELIST_FUTUREASSET, COLLATERAL, BORROW, ORACLE_ADDRESS, OWNER};
+use crate::state::{SUPPORTED_ASSETS, COLLATERAL, BORROW, OWNER};
 //TODO make CW2 compliant
 
 
@@ -51,49 +47,15 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Transfer { recipient, amount } => {
-            execute_transfer(deps, env, info, recipient, amount)
-        }
-        ExecuteMsg::Burn { amount } => execute_burn(deps, env, info, amount),
-        ExecuteMsg::Send {
-            contract,
-            amount,
-            msg,
-        } => execute_send(deps, env, info, contract, amount, msg),
-        ExecuteMsg::Mint { recipient, amount } => execute_mint(deps, env, info, recipient, amount),
-        ExecuteMsg::IncreaseAllowance {
-            spender,
-            amount,
-            expires,
-        } => execute_increase_allowance(deps, env, info, spender, amount, expires),
-        ExecuteMsg::DecreaseAllowance {
-            spender,
-            amount,
-            expires,
-        } => execute_decrease_allowance(deps, env, info, spender, amount, expires),
-        ExecuteMsg::TransferFrom {
-            owner,
-            recipient,
-            amount,
-        } => execute_transfer_from(deps, env, info, owner, recipient, amount),
-        ExecuteMsg::BurnFrom { owner, amount } => execute_burn_from(deps, env, info, owner, amount),
-        ExecuteMsg::SendFrom {
-            owner,
-            contract,
-            amount,
-            msg,
-        } => execute_send_from(deps, env, info, owner, contract, amount, msg),
-        ExecuteMsg::UpdateMarketing {
-            project,
-            description,
-            marketing,
-        } => execute_update_marketing(deps, env, info, project, description, marketing),
-        ExecuteMsg::UploadLogo(logo) => execute_upload_logo(deps, env, info, logo),
-
-        //Andisheh
-        ExecuteMsg::NativeDeposit() => execute_native_deposit(deps, env, info),
+        ExecuteMsg::NativeDeposit() => execute_native_deposit(deps, info),
+        ExecuteMsg::NativeSettle { .. } => {}
+        ExecuteMsg::NativeWithdraw { .. } => {}
+        ExecuteMsg::NativeLiquidate { .. } => {}
         ExecuteMsg::Receive(msg) => execute_receive_cw20(deps, env, info, msg),
-        ExecuteMsg::WhitelistCollateral(msg) => execute_whitelist_collateral(deps, env, info, msg),
+        ExecuteMsg::AddSupportedAsset{asset_name, asset_info:} =>
+            execute_add_supported_asset(deps, info, asset_name, asset_info),
+        ExecuteMsg::RemoveSupportedAsset { asset_name } =>
+            execute_remove_supported_asset(deps, info, asset_name),
 
     }
 
@@ -102,14 +64,13 @@ pub fn execute(
 /// Native Deposits
 pub fn execute_native_deposit(
     deps: DepsMut,
-    _env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError>
 {
     for coin in info.funds.into_iter() {
         // Check to see if token is on whitelist
-        let collateral_info = WHITELIST_COLLATERAL.may_load(&deps.storage, coin.denom.clone())?;
-        match collateral_info {
+        let asset_info_validated = SUPPORTED_ASSETS.may_load(&deps.storage, coin.denom.clone())?;
+        match asset_info_validated {
             Some(..) => {
                 COLLATERAL.update(
                     deps.storage,
@@ -120,7 +81,7 @@ pub fn execute_native_deposit(
                 )
             }
             None => {
-                return Err(ContractError::NotWhitelisted{}) ;
+                return Err(ContractError::AssetNotSupported {}) ;
             }
         }
 
@@ -134,55 +95,143 @@ pub fn execute_receive_cw20(
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
 
     match from_binary(&cw20_msg.msg) {
 
         Ok(Cw20HookMsg::Deposit {asset_name}) => {
             let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            deposit(deps, cw20_sender, info.sender, cw20_msg.amount, asset_name)
+            execute_cw20_deposit(deps, cw20_sender, info.sender, cw20_msg.amount, asset_name)
         }
 
-        Err(_) => Err(StdError::generic_err("invalid cw20 hook message")),
+        Err(_) => Err(StdError("invalid cw20 hook message")),
     }
+
 }
 
-pub fn deposit(
+pub fn execute_cw20_deposit(
     deps: DepsMut,
     sender: Addr,
     cw20_contract_addr: Addr,
     amount: Uint128,
     asset_name: String,
-) -> Result<Response, ContractError> {
+) -> Result<Response, ContractError>
+{
 
-    if let Some(asset_info) = WHITELIST_COLLATERAL.may_load(&deps.storage, asset_name.clone())? {
-        match asset_info {
-            AssetInfo::CW20Token { contract_addr, ..} => {
-                if cw20_contract_addr != contract_addr {
-                    return Err(StdError(format!("Address on whitelist and sender contract address for cw20 asset {} do not match", asset_name))) ;
-                }
-                COLLATERAL.update(
-                    deps.storage,
-                    (&sender, asset_name),
-                    |balance: Option<Uint128>| -> StdResult<_> {
-                        Ok(balance.unwrap_or_default().checked_add(amount)?)
+    if let Some(asset_info_validated) = SUPPORTED_ASSETS.may_load(&deps.storage, asset_name.clone())? {
+        match asset_info_validated {
+
+            AssetInfoValidated::NormalAsset(normal_asset_info_validated) => {
+                match normal_asset_info_validated {
+                    NormalAssetInfoValidated::CW20 {
+                        contract_addr, collateralizeable, ..
+                    } => {
+                        if cw20_contract_addr != contract_addr {
+                            return Err(StdError(format!("Address on whitelist and sender contract address for cw20 asset {} do not match", asset_name)));
+                        }
+                        COLLATERAL.update(
+                            deps.storage,
+                            (&sender, asset_name),
+                            |balance: Option<Uint128>| -> StdResult<_> {
+                                Ok(balance.unwrap_or_default().checked_add(amount)?)
+                            }
+                        )
                     }
-                )
 
-            }
-            AssetInfo::FutureAssetToken { contract_addr, ..} => {
-                if cw20_contract_addr != contract_addr {
-                    return Err(StdError(format!("Address on whitelist and sender contract address for cw20 asset {} do not match", asset_name))) ;
+                    NormalAssetInfoValidated::NativeToken { .. } => {
+                        return Err(StdError(format!("Sent a CW20 token with asset_name \"{}\" which corresponds to a native token", asset_name)));
+                    }
                 }
-                // More complicated since the asset may be borrowed .....
+            }
+
+
+
+
+
+            AssetInfoValidated::FutureAsset{contract_addr, collateralizeable, ..} => {
+
+                if cw20_contract_addr != contract_addr {
+                    return Err(StdError(format!("Address on whitelist and sender contract address for cw20 asset {} do not match", asset_name)));
+                }
+                if collateralizeable{
+                    if let Some(borrow_amount) = BORROW.may_load(&deps.storage, (&sender, asset_name.clone())){
+                        if borrow_amount <= amount{
+                            let collateral_amount = amount.checked_sub(borrow_amount) ;
+                            BORROW.remove(deps.storage, (&sender, asset_name.clone())) ;
+                            COLLATERAL.update(
+                                deps.storage,
+                                (&sender, asset_name.clone()),
+                                |balance: Option<Uint128>| -> StdResult<_> {
+                                    Ok(balance.unwrap_or_default().checked_sub(collateral_amount)?)
+                                },
+                            )?;
+                        }
+                        else{
+                            BORROW.update(
+                                deps.storage,
+                                (&sender, asset_name.clone()),
+                                |balance: Option<Uint128>| -> StdResult<_> {
+                                    Ok(balance.unwrap_or_default().checked_sub(amount)?)
+                                },
+                            )?;
+
+                        }
+                    }
+                    else {
+                        COLLATERAL.update(
+                            deps.storage,
+                            (&sender, asset_name.clone()),
+                            |balance: Option<Uint128>| -> StdResult<_> {
+                                Ok(balance.unwrap_or_default().checked_sub(amount)?)
+                            },
+                        )?;
+                    }
+
+                }
+                else{
+                    // Asset is not collateralizeable therefore:
+                    // Only accept deposits if it is a borrowed asset and amount deposited is less
+                    // or equal to the amount that is borrowed
+                    if let Some(borrow_amount) = BORROW.may_load(&deps.storage, (&sender, asset_name.clone())){
+                        if borrow_amount <=  amount{
+                            return Err(StdError("After deposit balance becomes positive and asset can not be used as collateral")) ;
+                        }
+                        else{
+                            BORROW.update(
+                                deps.storage,
+                                (&sender, asset_name.clone()),
+                                |balance: Option<Uint128>| -> StdResult<_> {
+                                    Ok(balance.unwrap_or_default().checked_sub(amount)?)
+                                },
+                            )?;
+
+                        }
+                    }
+                    else{
+                        return Err(ContractError::AssetNotCollaterlizeable {}) ;
+                    }
+
+                }
+
+                let res = Response::new()
+                    .add_attribute("action", "add future asset as collateral")
+                    .add_attribute("from", sender)
+                    .add_attribute("amount", amount)
+                    .add_attribute("asset_name", asset_name) ;
+                return Ok(res)
+
 
             }
-            AssetInfo::NativeToken {..} => {
-                return Err(StdError(format!("Sent a CW20 token with name \"{}\" which corresponds to a native token", asset_name))) ;
-            }
+
+
+
+
+
+
+
         }
     } else{
-            return Err(ContractError::NotWhitelisted{}) ;
+            return Err(ContractError::AssetNotSupported{}) ;
     }
 
 
@@ -195,60 +244,54 @@ pub fn deposit(
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-pub fn execute_whitelist_collateral(
+pub fn execute_add_supported_asset(
     deps: DepsMut,
-    _env: Env,
     info: MessageInfo,
-    msg: CollateralWhitelistMsg
+    asset_name: String,
+    asset_info: AssetInfo
 ) -> Result<Response, ContractError>
 {
+    // Only contract owner can add newsdl;a;lsdkjfa;sdlkfj supported assets
     contract_owner =  OWNER.load(&deps.storage)?;
     if info.sender != contract_owner {
         return Err(ContractError::Unauthorized {})
     }
-    match msg{
-        AddWhitelist{asset_name, asset_info} => {
-            let asset = WHITELIST_COLLATERAL.may_load(&deps.storage, asset_name.as_str())?;
-            match asset {
-                Some(..) => {
-                    return Err(ContractError::AlreadyOnWhitelist{}) ;
+    let asset_info_validated = asset_info.to_validated(&deps.api)? ;
+    let check_exists = SUPPORTED_ASSETS.may_load(&deps.storage, asset_name.clone())?;
+    match check_exists {
+        Some(..) => {
+                    return Err(ContractError::AssetAlreadySupported {}) ;
+        }
+        None => {
+                    SUPPORTED_ASSETS.save(deps.storage, asset_name.clone(), asset_info_validated)? ;
                 }
-                None => {
-                    WHITELIST_COLLATERAL.save(&deps.storage, asset_name.as_str(), asset_info())? ;
-                }
-            }
-        },
-        RemoveWhitelist{ asset_name } => {
-            WHITELIST_COLLATERAL.remove(asset_name.as_str()) ;
-        },
     }
 
-    //TODO: A more informative response
-   Ok(Response::default())
+   Ok(Response::new()
+        .add_attribute("action", "add_supported_asset")
+        .add_attribute("asset_name", asset_name)
+    )
 }
 
+pub fn execute_remove_supported_asset(
+    deps: DepsMut,
+    info: MessageInfo,
+    asset_name: String,
+)-> Result<Response, ContractError>
+{
+    // Only contract owner can remove supported assets
+    contract_owner =  OWNER.load(&deps.storage)?;
+    if info.sender != contract_owner {
+        return Err(ContractError::Unauthorized {})
+    }
 
+    SUPPORTED_ASSETS.remove(deps.storage, asset_name.clone());
+    Ok(Response::new()
+        .add_attribute("action", "remove_supported_asset")
+        .add_attribute("asset_name", asset_name)
+    )
 
+}
 
 
 

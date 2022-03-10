@@ -7,80 +7,106 @@ use cosmwasm_std::{Addr, Decimal};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum AssetInfo {
-    CW20Token {
-            contract_addr: Addr,
-            ratio: Decimal,
-            oracle_addr: Addr,
+pub enum AssetInfoValidated {
+    FutureAsset{
+        contract_addr: Addr,
+        collateralizeable: bool,
+        ratio: Decimal,
+        pool_oracle_addr: Addr,
+        underlying: NormalAssetInfo,
+
     },
-    NativeToken{
-        denom: String,
+    NormalAsset(NormalAssetInfoValidated)
+}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NormalAssetInfoValidated {
+    CW20Token {
+        contract_addr: Addr,
+        collateralizeable: bool,
         ratio: Decimal,
         oracle_addr: Addr,
     },
-    FutureAssetToken{
-        contract_addr: Addr,
+    NativeToken {
+        denom: String,
+        collateralizeable: bool,
         ratio: Decimal,
-        pool_oracle_addr: Addr,
-        underlying_oracle_addr: Addr
-    }
+        oracle_addr: Addr,
+    },
 }
+
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AssetInfo {
+    FutureAsset{
+        contract_addr: String,
+        collateralizeable: bool,
+        ratio: Decimal,
+        pool_oracle_addr: String,
+        underlying: NormalAssetInfo,
+    },
+    NormalAsset(NormalAssetInfo)
+}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NormalAssetInfo {
+    CW20Token {
+        contract_addr: String,
+        collateralizeable: bool,
+        ratio: Decimal,
+        oracle_addr: String,
+    },
+    NativeToken {
+        denom: String,
+        collateralizeable: bool,
+        ratio: Decimal,
+        oracle_addr: String,
+    },
+}
+
 
 impl AssetInfo {
-    pub fn is_native_token(&self) -> bool {
+    pub fn to_validated(self, api: &dyn Api) -> StdResult<AssetInfoValidated> {
         match self {
-            AssetInfo::NativeToken { .. } => true,
-            _ => false,
+            AssetInfo::FutureAsset { contract_addr, collateralizeable, ratio, pool_oracle_addr, underlying,} =>
+                Ok(AssetInfoValidated::FutureAsset {
+                    contract_addr: api.addr_validate(contract_addr.as_str())?,
+                    collateralizeable: collaterialzeable,
+                    ratio: ratio,
+                    pool_oracle_addr: api.addr_validate(pool_oracle_addr.as_str())?,
+                    underlying: underlying,
+                }),
+            AssetInfo::NormalAsset(normal_asset_info) =>
+                Ok(AssetInfoValidated::NormalAsset(normal_asset_info.to_validated(api)?))
         }
     }
-    pub fn is_future_token(&self) -> bool {
-        match self {
-            AssetInfo::FutureAssetToken { .. } => true,
-            _ => false,
-        }
-    }
-    pub fn is_cw20_token(&self) -> bool {
-        match self {
-            AssetInfo::CW20Token { .. } => true,
-            _ => false,
-        }
-    }
+}
 
-    pub fn equal(&self, asset: &AssetInfo) -> bool {
+impl NormalAssetInfo {
+    pub fn to_validated(self, api: &dyn Api) -> StdResult<NormalAssetInfoValidatedf> {
         match self {
-            AssetInfo::CW20Token { contract_addr, ratio, oracle_addr} => {
-                let self_contract_addr = contract_addr;
-                let self_ratio = ratio ;
-                let self_oracle_addr = oracle_addr ;
-                match asset {
-                    AssetInfo::CW20Token { contract_addr, ratio, oracle_addr } =>
-                        self_contract_addr == contract_addr && self_ratio == ratio && self_oracle_addr==oracle_addr ,
-                    _ => false,
-                }
-            }
-            AssetInfo::NativeToken { denom,  ratio, oracle_addr} => {
-                let self_denom = denom;
-                let self_ratio = ratio ;
-                let self_oracle_addr = oracle_addr ;
-                match asset {
-                    AssetInfo::NativeToken { denom,  ratio, oracle_addr} =>
-                        self_denom == denom  && self_ratio == ratio && self_oracle_addr==oracle_addr ,
-                    _ => false
-                }
-            }
-            AssetInfo::FutureAssetToken { mint_addr, ratio, pool_oracle_addr, underlying_oracle_addr} => {
-                let self_mint_addr = mint_addr;
-                let self_ratio = ratio ;
-                let self_pool_oracle_addr = pool_oracle_addr ;
-                let self_underlying_oracle_addr = underlying_oracle_addr ;
-                match asset {
-                    AssetInfo::FutureAssetToken {  mint_addr, ratio, pool_oracle_addr, underlying_oracle_addr} =>
-                        self_mint_addr == mint_addr && self_ratio == ratio &&
-                            self_pool_oracle_addr == pool_oracle_addr  &&  self_underlying_oracle_addr == underlying_oracle_addr,
-                    _ => false,
-                }
-            }
+            NormalAssetInfo::CW20Token { contract_addr, ratio, oracle_addr, collateralizeable} =>
+                Ok(NormalAssetInfoValidated::CW20Token {
+                    contract_addr: api.addr_validate(contract_addr.as_str())?,
+                    ratio: ratio,
+                    oracle_addr: api.addr_validate(oracle_addr.as_str())?,
+                    collateralizeable: collateralizeable,
+                }),
+
+            NormalAssetInfo::NativeToken { denom, ratio, oracle_addr, collateralizeable} =>
+                Ok(NormalAssetInfoValidated::NativeToken {
+                    denom: denom,
+                    ratio: ratio,
+                    oracle_addr: api.addr_validate(oracle_addr.as_str())?,
+                    collateralizeable: collateralizeable,
+                }),
 
         }
     }
 }
+
+
+
+
+

@@ -9,14 +9,13 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Asset already on whitelist")]
-    AlreadyOnWhitelist {},
+    #[error("Asset already supported")]
+    AssetAlreadySupported {},
 
-    #[error("Asset is not on the whitelist")]
-    NotWhitelisted {},
+    #[error("Asset is not supported")]
+    AssetNotSupported {},
 
-
-
-
+    #[error("Asset is not supported as collateral")]
+    AssetNotCollaterlizeable {},
 
 }

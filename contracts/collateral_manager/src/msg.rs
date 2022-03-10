@@ -1,7 +1,7 @@
 use cosmwasm_std::{StdError, StdResult, Uint128, Decimal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use steadifi::{AssetInfo} ;
+use steadifi::{AssetInfo, AssetInfoValidated} ;
 use cw20::{Cw20ReceiveMsg} ;
 use cosmwasm_std{Addr} ;
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
@@ -83,19 +83,18 @@ pub struct InstantiateMsg{
 pub enum ExecuteMsg{
     NativeDeposit{}, // Deposit native tokens as collateral
     NativeSettle{},  // Settle native borrow only available 7 days prior expiry of contract
+    NativeWithdraw{} , // Withdraw Native tokens
+    NativeLiquidate{}, // Liquidate account
 
+    Receive(Cw20ReceiveMsg), //Exactly same operation for cw20 tokens
 
-    Receive(Cw20ReceiveMsg), //Other cw20 tokens
-
-    WhitelistCollateral(CollateralWhitelistMsg), // Add or remove assets from collateral whitelist
-    WhitelistFuture{
-        future_name: String,
-        address: String,
+    AddSupportedAsset{
+        asset_name: String,
+        asset_info: AssetInfo,
     },
-    Borrow{} , // Mint future asset and send it to the user
-    WithdrawCollateral{}, // Withdraw collateral
-
-
+    RemoveSupportedAsset{
+        asset_name: String
+    },
 }
 
 
@@ -112,20 +111,10 @@ pub enum Cw20HookMsg {
     Settle { asset_name: String },
     /// Liquidate Under-collaterlaized accounts or accounts that have not settled debt after expiry date
     Liquidate {liquidation_msg: LiquidationMsg},
+    /// Withdraw CW20 Tokens
+    Withdraw
 }
 
-//////////////////////////////////////////////
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum CollateralWhitelistMsg {
-    AddWhitelist{
-        asset_name: String, //Name you want to give to this asset
-        asset_info: AssetInfo, //Information
-    },
-    RemoveWhitelist{
-        asset_name: String, // name of asset to remove
-    },
-}
 
 //////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -1,26 +1,20 @@
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Int128};
 use cw_storage_plus::{Map, Item};
-use steadifi::{AssetInfo} ;
+use steadifi::{AssetInfo,AssetInfoValidated} ;
 
 
 
-// Maps string containing name of collateral type to the AssetInfo struct which contains its information
-// Collateral can be any native token or a cw20 token (including future assets)
-pub const WHITELIST_COLLATERAL: MAP<String, AssetInfo> = Map::new("whitelist_collateral");
-
-// Maps a string containing name of a future asset to its information
-pub const WHITELIST_FUTUREASSET: MAP<String, AssetInfo> = Map::new("whitelist_futureasset");
+// Maps string containing name of asset to the AssetInfo struct which contains its information
+pub const SUPPORTED_ASSETS: Map<String, AssetInfoValidated> = Map::new("whitelist_collateral");
 
 
-// Maps a user address and string containing name of collateral to how much of the collateral
-// he/she has deposited
-// One can assume assets on this list are all valid and on whitelist_collateral
+
+// Maps a user address and string containing name of asset to how much the balance of that asset is
 pub const COLLATERAL: Map<(&Addr, String), Uint128> = Map::new("collateral") ;
-
-// Maps a user address and string containing future asset names to the amount they have borrowed
-// One can assume assets on this list are all valid and on the whitelist_future_asset
+// Maps a user address and string containing name of asset to how much of that asset is borrowed
+// Only future assets can be borrowed
 pub const BORROW: Map<(&Addr, String), Uint128> = Map::new("borrow") ;
 
-// Owner of contract can add or remove assets on whitelists
+// Owner of contract can add or remove supported assets
 // Eventually the owner iwll be the governance contract
 pub const OWNER: Item<Addr> = Item::new("owner") ;
