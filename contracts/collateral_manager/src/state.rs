@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Int128};
 use cw_storage_plus::{Map, Item};
 use steadifi::{AssetInfo,AssetInfoValidated} ;
-
+use cw_controllers::{Admin} ;
 
 
 // Maps string containing name of asset to the AssetInfo struct which contains its information
@@ -15,6 +15,6 @@ pub const COLLATERAL: Map<(&Addr, String), Uint128> = Map::new("collateral") ;
 // Only future assets can be borrowed
 pub const BORROW: Map<(&Addr, String), Uint128> = Map::new("borrow") ;
 
-// Owner of contract can add or remove supported assets
-// Eventually the owner iwll be the governance contract
-pub const OWNER: Item<Addr> = Item::new("owner") ;
+// Admin of contract can add or remove supported assets
+// Eventually the admin will be the governance contract
+pub const ADMIN: Admin = Admin::new("admin") ;

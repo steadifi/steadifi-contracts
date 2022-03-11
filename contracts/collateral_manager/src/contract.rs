@@ -3,26 +3,13 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     Addr, from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
 };
-
-use cw20::{
-    BalanceResponse, Cw20Coin, DownloadLogoResponse, EmbeddedLogo, Logo, LogoInfo,
-    MarketingInfoResponse, MinterResponse, TokenInfoResponse,
-};
-
-
-
-use crate::allowances::{
-    execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
-    execute_transfer_from, query_allowance,
-};
-
-//Andisheh
 use cw20::{Cw20ReceiveMsg};
 use steadifi::{AssetInfo, AssetInfoValidated};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, CollateralWhitelistMsg,
                 Cw20HookMsg};
-use crate::state::{SUPPORTED_ASSETS, COLLATERAL, BORROW, OWNER};
+use crate::state::{SUPPORTED_ASSETS, COLLATERAL, BORROW, ADMIN};
+use cw0::{maybe_addr} ;
 //TODO make CW2 compliant
 
 
@@ -31,10 +18,10 @@ use crate::state::{SUPPORTED_ASSETS, COLLATERAL, BORROW, OWNER};
 pub fn instantiate(
     mut deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    OWNER.save(deps.storage, &msg.sender)?;
+    ADMIN.set(deps.branch(), info.sender)? ;
     Ok(Response::default())
 }
 
@@ -57,10 +44,21 @@ pub fn execute(
         ExecuteMsg::RemoveSupportedAsset { asset_name } =>
             execute_remove_supported_asset(deps, info, asset_name),
 
+        ExecuteMsg::UpdateAdmin {admin} => execute_update_admin(deps, info, admin),
+
     }
 
 
 }
+pub fn execute_update_admin(
+    deps: DepsMut,
+    info: MessageInfo,
+    admin : String,
+) -> Result<Response, ContractError>{
+    ADMIN.assert_admin(deps.as_ref(), &info.sender)? ;
+    Ok(ADMIN.execute_update_admin(deps, info, maybe_addr(api, admin)?)?)
+}
+
 /// Native Deposits
 pub fn execute_native_deposit(
     deps: DepsMut,
@@ -104,6 +102,7 @@ pub fn execute_receive_cw20(
             execute_cw20_deposit(deps, cw20_sender, info.sender, cw20_msg.amount, asset_name)
         }
 
+
         Err(_) => Err(StdError("invalid cw20 hook message")),
     }
 
@@ -131,15 +130,15 @@ pub fn execute_cw20_deposit(
                         }
                         COLLATERAL.update(
                             deps.storage,
-                            (&sender, asset_name),
+                            (&sender, asset_name.clone()),
                             |balance: Option<Uint128>| -> StdResult<_> {
                                 Ok(balance.unwrap_or_default().checked_add(amount)?)
                             }
-                        )
+                        )?;
                     }
 
                     NormalAssetInfoValidated::NativeToken { .. } => {
-                        return Err(StdError(format!("Sent a CW20 token with asset_name \"{}\" which corresponds to a native token", asset_name)));
+                        return Err(StdError(format!("{} corresponds to a native token", asset_name)));
                     }
                 }
             }
@@ -155,29 +154,31 @@ pub fn execute_cw20_deposit(
                 }
                 if collateralizeable{
                     if let Some(borrow_amount) = BORROW.may_load(&deps.storage, (&sender, asset_name.clone())){
-                        if borrow_amount <= amount{
-                            let collateral_amount = amount.checked_sub(borrow_amount) ;
-                            BORROW.remove(deps.storage, (&sender, asset_name.clone())) ;
-                            COLLATERAL.update(
-                                deps.storage,
-                                (&sender, asset_name.clone()),
-                                |balance: Option<Uint128>| -> StdResult<_> {
-                                    Ok(balance.unwrap_or_default().checked_sub(collateral_amount)?)
-                                },
-                            )?;
-                        }
-                        else{
-                            BORROW.update(
-                                deps.storage,
-                                (&sender, asset_name.clone()),
-                                |balance: Option<Uint128>| -> StdResult<_> {
-                                    Ok(balance.unwrap_or_default().checked_sub(amount)?)
-                                },
-                            )?;
+                        let excess = amount.checked_sub(borrow_amount);
+                        match excess {
+                            Ok(collateral_amount) => { //Deposit is greater equal to the current borrow
+                                BORROW.remove(deps.storage, (&sender, asset_name.clone()));
+                                COLLATERAL.update(
+                                    deps.storage,
+                                    (&sender, asset_name.clone()),
+                                    |balance: Option<Uint128>| -> StdResult<_> {
+                                        Ok(balance.unwrap_or_default().checked_add(collateral_amount)?)
+                                    },
+                                )?;
+                            }
+                            Err(_) => {  //Deposit is less than current borrow
+                                BORROW.update(
+                                    deps.storage,
+                                    (&sender, asset_name.clone()),
+                                    |balance: Option<Uint128>| -> StdResult<_> {
+                                        Ok(balance.unwrap_or_default().checked_sub(amount)?)
+                                    },
+                                )?;
+                            }
 
                         }
                     }
-                    else {
+                    else { //Not borrowed
                         COLLATERAL.update(
                             deps.storage,
                             (&sender, asset_name.clone()),
@@ -213,13 +214,6 @@ pub fn execute_cw20_deposit(
 
                 }
 
-                let res = Response::new()
-                    .add_attribute("action", "add future asset as collateral")
-                    .add_attribute("from", sender)
-                    .add_attribute("amount", amount)
-                    .add_attribute("asset_name", asset_name) ;
-                return Ok(res)
-
 
             }
 
@@ -234,12 +228,15 @@ pub fn execute_cw20_deposit(
             return Err(ContractError::AssetNotSupported{}) ;
     }
 
+    let res = Response::new()
+        .add_attribute("action", "add  asset as collateral")
+        .add_attribute("from", sender)
+        .add_attribute("amount", amount)
+        .add_attribute("asset_name", asset_name);
 
-    Ok(Response::new().add_attributes(vec![
-        attr("action", "deposit"),
-        attr("position_idx", position_idx.to_string()),
-        attr("deposit_amount", collateral.to_string()),
-    ]))
+    Ok(res)
+
+
 }
 
 
@@ -251,11 +248,9 @@ pub fn execute_add_supported_asset(
     asset_info: AssetInfo
 ) -> Result<Response, ContractError>
 {
-    // Only contract owner can add newsdl;a;lsdkjfa;sdlkfj supported assets
-    contract_owner =  OWNER.load(&deps.storage)?;
-    if info.sender != contract_owner {
-        return Err(ContractError::Unauthorized {})
-    }
+    // Only contract admin can add new supported assets
+    ADMIN.assert_admin(deps.as_ref(), &info.sender)? ;
+
     let asset_info_validated = asset_info.to_validated(&deps.api)? ;
     let check_exists = SUPPORTED_ASSETS.may_load(&deps.storage, asset_name.clone())?;
     match check_exists {
@@ -280,10 +275,7 @@ pub fn execute_remove_supported_asset(
 )-> Result<Response, ContractError>
 {
     // Only contract owner can remove supported assets
-    contract_owner =  OWNER.load(&deps.storage)?;
-    if info.sender != contract_owner {
-        return Err(ContractError::Unauthorized {})
-    }
+    ADMIN.assert_admin(deps.as_ref(), &info.sender)? ;
 
     SUPPORTED_ASSETS.remove(deps.storage, asset_name.clone());
     Ok(Response::new()
