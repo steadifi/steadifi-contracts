@@ -1,22 +1,19 @@
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
-use cosmwasm_std::{Addr, Decimal};
+use cosmwasm_std::{Addr, Api, Decimal, StdResult};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfoValidated {
-    FutureAsset{
+    FutureAsset {
         contract_addr: Addr,
         collateralizeable: bool,
         ratio: Decimal,
         pool_oracle_addr: Addr,
         underlying: NormalAssetInfo,
-
     },
-    NormalAsset(NormalAssetInfoValidated)
+    NormalAsset(NormalAssetInfoValidated),
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -35,18 +32,17 @@ pub enum NormalAssetInfoValidated {
     },
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfo {
-    FutureAsset{
+    FutureAsset {
         contract_addr: String,
         collateralizeable: bool,
         ratio: Decimal,
         pool_oracle_addr: String,
         underlying: NormalAssetInfo,
     },
-    NormalAsset(NormalAssetInfo)
+    NormalAsset(NormalAssetInfo),
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -65,48 +61,55 @@ pub enum NormalAssetInfo {
     },
 }
 
-
 impl AssetInfo {
     pub fn to_validated(self, api: &dyn Api) -> StdResult<AssetInfoValidated> {
         match self {
-            AssetInfo::FutureAsset { contract_addr, collateralizeable, ratio, pool_oracle_addr, underlying,} =>
-                Ok(AssetInfoValidated::FutureAsset {
-                    contract_addr: api.addr_validate(contract_addr.as_str())?,
-                    collateralizeable: collaterialzeable,
-                    ratio: ratio,
-                    pool_oracle_addr: api.addr_validate(pool_oracle_addr.as_str())?,
-                    underlying: underlying,
-                }),
-            AssetInfo::NormalAsset(normal_asset_info) =>
-                Ok(AssetInfoValidated::NormalAsset(normal_asset_info.to_validated(api)?))
+            AssetInfo::FutureAsset {
+                contract_addr,
+                collateralizeable,
+                ratio,
+                pool_oracle_addr,
+                underlying,
+            } => Ok(AssetInfoValidated::FutureAsset {
+                contract_addr: api.addr_validate(contract_addr.as_str())?,
+                collateralizeable,
+                ratio,
+                pool_oracle_addr: api.addr_validate(pool_oracle_addr.as_str())?,
+                underlying,
+            }),
+            AssetInfo::NormalAsset(normal_asset_info) => Ok(AssetInfoValidated::NormalAsset(
+                normal_asset_info.to_validated(api)?,
+            )),
         }
     }
 }
 
 impl NormalAssetInfo {
-    pub fn to_validated(self, api: &dyn Api) -> StdResult<NormalAssetInfoValidatedf> {
+    pub fn to_validated(self, api: &dyn Api) -> StdResult<NormalAssetInfoValidated> {
         match self {
-            NormalAssetInfo::CW20Token { contract_addr, ratio, oracle_addr, collateralizeable} =>
-                Ok(NormalAssetInfoValidated::CW20Token {
-                    contract_addr: api.addr_validate(contract_addr.as_str())?,
-                    ratio: ratio,
-                    oracle_addr: api.addr_validate(oracle_addr.as_str())?,
-                    collateralizeable: collateralizeable,
-                }),
+            NormalAssetInfo::CW20Token {
+                contract_addr,
+                ratio,
+                oracle_addr,
+                collateralizeable,
+            } => Ok(NormalAssetInfoValidated::CW20Token {
+                contract_addr: api.addr_validate(contract_addr.as_str())?,
+                ratio,
+                oracle_addr: api.addr_validate(oracle_addr.as_str())?,
+                collateralizeable,
+            }),
 
-            NormalAssetInfo::NativeToken { denom, ratio, oracle_addr, collateralizeable} =>
-                Ok(NormalAssetInfoValidated::NativeToken {
-                    denom: denom,
-                    ratio: ratio,
-                    oracle_addr: api.addr_validate(oracle_addr.as_str())?,
-                    collateralizeable: collateralizeable,
-                }),
-
+            NormalAssetInfo::NativeToken {
+                denom,
+                ratio,
+                oracle_addr,
+                collateralizeable,
+            } => Ok(NormalAssetInfoValidated::NativeToken {
+                denom,
+                ratio,
+                oracle_addr: api.addr_validate(oracle_addr.as_str())?,
+                collateralizeable,
+            }),
         }
     }
 }
-
-
-
-
-
