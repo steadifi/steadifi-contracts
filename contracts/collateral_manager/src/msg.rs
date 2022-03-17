@@ -18,7 +18,7 @@ pub enum ExecuteMsg {
     NativeSettle {},         // Settle native borrow only available 7 days prior expiry of contract
     NativeWithdraw {},       // Withdraw Native tokens
     NativeLiquidate {},      // Liquidate account
-    Receive(Cw20ReceiveMsg), //Exactly same operation for cw20 tokens
+    Receive(Cw20ReceiveMsg), //Exactly same operations but for cw20 tokens
     AddSupportedAsset {
         asset_name: String,
         asset_info: AssetInfo,

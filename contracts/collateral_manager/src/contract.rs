@@ -293,3 +293,25 @@ pub fn query_asset_info(deps: Deps, asset_name: String) -> StdResult<Option<Asse
     let asset_info = SUPPORTED_ASSETS.may_load(deps.storage, &asset_name)?;
     Ok(asset_info)
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::testing::{
+        mock_dependencies,
+        mock_env,
+        mock_info, //, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
+    };
+    //use cosmwasm_std::{attr, coin, from_binary, BankMsg, OwnedDeps, SubMsg};
+
+    #[test]
+    fn test_initialization() {
+        let mut deps = mock_dependencies(&[]);
+        let env = mock_env();
+        let info = mock_info("Andisheh", &[]);
+        let instantiate_msg = InstantiateMsg {};
+        let contract_result = instantiate(deps.as_mut(), env, info, instantiate_msg);
+        assert_eq!(contract_result, Ok(Response::default()));
+    }
+}
