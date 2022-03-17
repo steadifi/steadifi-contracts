@@ -51,7 +51,7 @@ pub fn execute(
         ExecuteMsg::UpdateAdmin { new_admin } => execute_update_admin(deps, info, new_admin),
     }
 }
-pub fn execute_update_admin(
+fn execute_update_admin(
     deps: DepsMut,
     info: MessageInfo,
     new_admin: String,
@@ -62,7 +62,7 @@ pub fn execute_update_admin(
 }
 
 /// Native Deposits
-pub fn execute_native_deposit(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+fn execute_native_deposit(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     for coin in info.funds.into_iter() {
         // Check to see if token is on whitelist
         let asset_info_validated = SUPPORTED_ASSETS.may_load(deps.storage, &coin.denom)?;
@@ -83,7 +83,7 @@ pub fn execute_native_deposit(deps: DepsMut, info: MessageInfo) -> Result<Respon
     Ok(Response::default())
 }
 
-pub fn execute_receive_cw20(
+fn execute_receive_cw20(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -100,7 +100,7 @@ pub fn execute_receive_cw20(
     }
 }
 
-pub fn execute_cw20_deposit(
+fn execute_cw20_deposit(
     deps: DepsMut,
     sender: Addr,
     cw20_contract_addr: Addr,
@@ -220,7 +220,7 @@ pub fn execute_cw20_deposit(
     Ok(res)
 }
 
-pub fn execute_add_supported_asset(
+fn execute_add_supported_asset(
     deps: DepsMut,
     info: MessageInfo,
     asset_name: String,
@@ -245,7 +245,7 @@ pub fn execute_add_supported_asset(
         .add_attribute("asset_name", asset_name))
 }
 
-pub fn execute_remove_supported_asset(
+fn execute_remove_supported_asset(
     deps: DepsMut,
     info: MessageInfo,
     asset_name: String,
@@ -272,11 +272,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-pub fn query_balance(
-    deps: Deps,
-    address: String,
-    asset_name: String,
-) -> StdResult<BalanceResponse> {
+fn query_balance(deps: Deps, address: String, asset_name: String) -> StdResult<BalanceResponse> {
     let address = deps.api.addr_validate(&address)?;
     let balance_response = BalanceResponse {
         collateral: COLLATERAL
@@ -289,29 +285,11 @@ pub fn query_balance(
     Ok(balance_response)
 }
 
-pub fn query_asset_info(deps: Deps, asset_name: String) -> StdResult<Option<AssetInfoValidated>> {
+fn query_asset_info(deps: Deps, asset_name: String) -> StdResult<Option<AssetInfoValidated>> {
     let asset_info = SUPPORTED_ASSETS.may_load(deps.storage, &asset_name)?;
     Ok(asset_info)
 }
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//Tests
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cosmwasm_std::testing::{
-        mock_dependencies,
-        mock_env,
-        mock_info, //, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
-    };
-    //use cosmwasm_std::{attr, coin, from_binary, BankMsg, OwnedDeps, SubMsg};
 
-    #[test]
-    fn test_initialization() {
-        let mut deps = mock_dependencies(&[]);
-        let env = mock_env();
-        let info = mock_info("Andisheh", &[]);
-        let instantiate_msg = InstantiateMsg {};
-        let contract_result = instantiate(deps.as_mut(), env, info, instantiate_msg);
-        assert_eq!(contract_result, Ok(Response::default()));
-    }
-}
+#[cfg(test)]
+#[path = "./contract_unittests.rs"]
+mod contract_unittests;
