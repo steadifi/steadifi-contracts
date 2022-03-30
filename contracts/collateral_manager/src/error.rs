@@ -1,5 +1,5 @@
 use cosmwasm_std::StdError;
-use cw_controllers::AdminError;
+pub use cw_controllers::AdminError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -21,4 +21,7 @@ pub enum ContractError {
 
     #[error("Asset is not supported as collateral")]
     AssetNotCollaterlizeable {},
+
+    #[error("You have amount = 0 of this asset")]
+    AssetIsZero {},
 }

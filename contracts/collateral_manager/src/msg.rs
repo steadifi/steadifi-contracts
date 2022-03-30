@@ -14,10 +14,13 @@ pub struct InstantiateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    NativeDeposit {},        // Deposit native tokens as collateral
-    NativeSettle {},         // Settle native borrow only available 7 days prior expiry of contract
-    NativeWithdraw {},       // Withdraw Native tokens
-    NativeLiquidate {},      // Liquidate account
+    NativeDeposit {}, // Deposit native tokens as collateral
+    NativeSettle {},  // Settle native borrow only available 7 days prior expiry of contract
+    NativeWithdraw {
+        coin_denom: String,
+        amount: Uint128,
+    }, // Withdraw Native tokens
+    NativeLiquidate {}, // Liquidate account
     Receive(Cw20ReceiveMsg), //Exactly same operations but for cw20 tokens
     AddSupportedAsset {
         asset_name: String,
@@ -45,7 +48,7 @@ pub enum Cw20HookMsg {
     /// Liquidate Under-collaterlaized accounts or accounts that have not settled debt after expiry date
     Liquidate {},
     /// Withdraw CW20 Tokens
-    Withdraw {},
+    Withdraw { asset_name: String, amount: Uint128 },
 }
 
 //////////////////////////////////////////////

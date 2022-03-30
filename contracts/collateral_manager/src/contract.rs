@@ -1,11 +1,12 @@
 use crate::error::ContractError;
 use crate::msg::{BalanceResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{ADMIN, BORROW, COLLATERAL, SUPPORTED_ASSETS};
+use crate::helper_functions{can_withdraw}
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult, Uint128,
+    from_binary, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    Response, StdError, StdResult, Uint128,
 };
 use cw0::maybe_addr;
 use cw20::Cw20ReceiveMsg;
@@ -35,11 +36,18 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        // Handling of native tokens
         ExecuteMsg::NativeDeposit {} => execute_native_deposit(deps, info),
         ExecuteMsg::NativeSettle { .. } => Ok(Response::default()),
-        ExecuteMsg::NativeWithdraw { .. } => Ok(Response::default()),
+        ExecuteMsg::NativeWithdraw { coin_denom, amount } => {
+            execute_native_withdraw(deps, info, coin_denom, amount)
+        }
         ExecuteMsg::NativeLiquidate { .. } => Ok(Response::default()),
+
+        // Handling of CW20 tokens
         ExecuteMsg::Receive(msg) => execute_receive_cw20(deps, env, info, msg),
+
+        // Handling of supported assets
         ExecuteMsg::AddSupportedAsset {
             asset_name,
             asset_info,
@@ -48,6 +56,7 @@ pub fn execute(
             execute_remove_supported_asset(deps, info, asset_name)
         }
 
+        // Admin handling
         ExecuteMsg::UpdateAdmin { new_admin } => execute_update_admin(deps, info, new_admin),
     }
 }
@@ -83,6 +92,72 @@ fn execute_native_deposit(deps: DepsMut, info: MessageInfo) -> Result<Response, 
     Ok(Response::default())
 }
 
+///Native Withdrawals
+///
+fn execute_native_withdraw(
+    deps: DepsMut,
+    info: MessageInfo,
+    coin_denom: String,
+    amount: Uint128,
+) -> Results<Response, ContractError> {
+    let address = info.sender;
+    // Check if asset is supported
+    if let Some(asset_info_validated) = SUPPORTED_ASSETS.may_load(deps.storage, &coin_denom)? {
+        let Some(amount) = COLLATERAL
+            .may_load(deps.sotrage, (&address, &coin_denom))
+            .unwrap_or_default();
+        if amount.is_zero() {
+            return Err(ContractError::AssetIsZero {});
+        }
+        // Check collateral requirements
+        if
+
+
+
+
+    } else {
+        //may_load returned Ok(None)
+        return Err(ContractError::AssetNotSupported {});
+    }
+
+    let response = Response::new();
+    response.add_message(CosmosMsg::Bank(BankMsg::Send {
+        to_address: recipient_address.into(),
+        amount: vec![deduct_tax(deps, Coin { denom, amount })?],
+    }));
+    Ok(response)
+}
+
+pub fn build_send_asset_with_tax_deduction_msg(
+    deps: Deps,
+    recipient_address: Addr,
+    asset_label: String,
+    asset_type: AssetType,
+    amount: Uint128,
+) -> StdResult<CosmosMsg> {
+    match asset_type {
+        AssetType::Native => Ok(build_send_native_asset_with_tax_deduction_msg(
+            deps,
+            recipient_address,
+            asset_label,
+            amount,
+        )?),
+        AssetType::Cw20 => build_send_cw20_token_msg(recipient_address, asset_label, amount),
+    }
+}
+
+pub fn build_send_native_asset_with_tax_deduction_msg(
+    deps: Deps,
+    recipient_address: Addr,
+    denom: String,
+    amount: Uint128,
+) -> StdResult<CosmosMsg> {
+    Ok(CosmosMsg::Bank(BankMsg::Send {
+        to_address: recipient_address.into(),
+        amount: vec![deduct_tax(deps, Coin { denom, amount })?],
+    }))
+}
+
 fn execute_receive_cw20(
     deps: DepsMut,
     _env: Env,
@@ -94,12 +169,12 @@ fn execute_receive_cw20(
             let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
             execute_cw20_deposit(deps, cw20_sender, info.sender, cw20_msg.amount, asset_name)
         }
-
+        Ok(Cw20HookMsg::Withdraw {}) => {}
         Err(_) => Err(StdError::generic_err("invalid cw20 hook message").into()),
-        _ => Ok(Response::default()),
     }
 }
 
+/// CW20 Deposits
 fn execute_cw20_deposit(
     deps: DepsMut,
     sender: Addr,
