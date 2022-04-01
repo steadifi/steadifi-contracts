@@ -27,43 +27,14 @@ pub fn execute(
     _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    let res = match msg {
-        ExecuteMsg::MintAndSend { recipient, amount } => {
-            if amount == Uint128::zero() {
-                return Err(ContractError::InvalidZeroAmount {});
-            }
-            let rcpt_addr = deps.api.addr_validate(&recipient)?;
-            //Execute Mint
-            let cw20_contract_address: Addr = get_cw20_address(&deps)?;
-            let response = Response::new()
-                .add_attribute("recipient", &recipient)
-                .add_attribute("amount minted", amount.to_string())
-                .add_message(
-                    cw20::Cw20ExecuteMsg::Mint {
-                        recipient: rcpt_addr.to_string(),
-                        amount: amount,
-                    }
-                    .into_cosmos_msg(cw20_contract_address)?,
-                );
-            Ok(response)
-        }
-    };
-    res
-}
-
-fn get_cw20_address(deps: &DepsMut) -> StdResult<Addr> {
-    let info = MINT_AUTHORITY_INFO.load(deps.storage)?;
-    Ok(info.address_cw20)
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::MintAuthorityInfo {} => to_binary(&query_mint_authority_info(deps)?),
+        ExecuteMsg::UpdatePrice { .. } => Ok(Response::new()),
     }
 }
 
-fn query_mint_authority_info(deps: Deps) -> StdResult<MintAuthorityInfo> {
-    let info = MINT_AUTHORITY_INFO.load(deps.storage)?;
-    Ok(info)
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Bbool> {
+    match msg {
+        QueryMsg::GetPrice {} => to_binary(&query_mint_authority_info(deps)?),
+    }
 }
