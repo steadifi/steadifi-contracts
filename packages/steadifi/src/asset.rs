@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Api, Decimal, StdResult};
+use cosmwasm_std::{Addr, Api, Decimal, StdResult, Uint128};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -10,8 +10,8 @@ pub enum AssetInfoValidated {
         contract_addr: Addr,
         collateralizeable: bool,
         ratio: Decimal,
-        pool_oracle_addr: Addr,
         underlying: NormalAssetInfo,
+        decimals: Uint128,
     },
     NormalAsset(NormalAssetInfoValidated),
 }
@@ -22,13 +22,13 @@ pub enum NormalAssetInfoValidated {
         contract_addr: Addr,
         collateralizeable: bool,
         ratio: Decimal,
-        oracle_addr: Addr,
+        decimals: Uint128,
     },
     NativeToken {
         denom: String,
         collateralizeable: bool,
         ratio: Decimal,
-        oracle_addr: Addr,
+        decimals: Uint128,
     },
 }
 
@@ -39,8 +39,8 @@ pub enum AssetInfo {
         contract_addr: String,
         collateralizeable: bool,
         ratio: Decimal,
-        pool_oracle_addr: String,
         underlying: NormalAssetInfo,
+        decimals: Uint128,
     },
     NormalAsset(NormalAssetInfo),
 }
@@ -51,13 +51,13 @@ pub enum NormalAssetInfo {
         contract_addr: String,
         collateralizeable: bool,
         ratio: Decimal,
-        oracle_addr: String,
+        decimals: Uint128,
     },
     NativeToken {
         denom: String,
         collateralizeable: bool,
         ratio: Decimal,
-        oracle_addr: String,
+        decimals: Uint128,
     },
 }
 
@@ -68,14 +68,14 @@ impl AssetInfo {
                 contract_addr,
                 collateralizeable,
                 ratio,
-                pool_oracle_addr,
                 underlying,
+                decimals,
             } => Ok(AssetInfoValidated::FutureAsset {
                 contract_addr: api.addr_validate(contract_addr.as_str())?,
                 collateralizeable,
                 ratio,
-                pool_oracle_addr: api.addr_validate(pool_oracle_addr.as_str())?,
                 underlying,
+                decimals, //TODO: Add some validation here
             }),
             AssetInfo::NormalAsset(normal_asset_info) => Ok(AssetInfoValidated::NormalAsset(
                 normal_asset_info.to_validated(api)?,
@@ -90,26 +90,38 @@ impl NormalAssetInfo {
             NormalAssetInfo::CW20Token {
                 contract_addr,
                 ratio,
-                oracle_addr,
                 collateralizeable,
+                decimals,
             } => Ok(NormalAssetInfoValidated::CW20Token {
                 contract_addr: api.addr_validate(contract_addr.as_str())?,
                 ratio,
-                oracle_addr: api.addr_validate(oracle_addr.as_str())?,
                 collateralizeable,
+                decimals,
             }),
 
             NormalAssetInfo::NativeToken {
                 denom,
                 ratio,
-                oracle_addr,
                 collateralizeable,
+                decimals,
             } => Ok(NormalAssetInfoValidated::NativeToken {
                 denom,
                 ratio,
-                oracle_addr: api.addr_validate(oracle_addr.as_str())?,
                 collateralizeable,
+                decimals,
             }),
+        }
+    }
+}
+
+impl AssetInfoValidated {
+    pub fn get_ratio(&self) -> Decimal {
+        match self {
+            AssetInfoValidated::FutureAsset { ratio, .. } => ratio.clone(),
+            AssetInfoValidated::NormalAsset(normal_asset_info) => match normal_asset_info {
+                NormalAssetInfoValidated::NativeToken { ratio, .. } => ratio.clone(),
+                NormalAssetInfoValidated::CW20Token { ratio, .. } => ratio.clone(),
+            },
         }
     }
 }
