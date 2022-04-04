@@ -87,7 +87,7 @@ pub(crate) fn encode_length(namespace: &[u8]) -> [u8; 2] {
     [length_bytes[2], length_bytes[3]]
 }
 
-/// Use this in Map/SnapshotMap/etc when you want to provide a QueryRaw helper.
+/// Use this in Map/SnapshotMap/etc when you want to provide a QueryRaw testing.
 /// This is similar to querier.query(WasmQuery::Raw{}), except it does NOT parse the
 /// result, but return a possibly empty Binary to be handled by the calling code.
 /// That is essential to handle b"" as None.

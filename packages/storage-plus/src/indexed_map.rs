@@ -352,7 +352,7 @@ mod test {
         // In a MultiIndex, an index key is composed by the index and the primary key.
         // Primary key may be empty (so that to iterate over all elements that match just the index)
         let key = (b"Maria".to_vec(), b"".to_vec());
-        // Use the index_key() helper to build the (raw) index key
+        // Use the index_key() testing to build the (raw) index key
         let key = map.idx.name.index_key(key);
         // Iterate using a bound over the raw key
         let count = map
@@ -366,7 +366,7 @@ mod test {
         // index_key() over MultiIndex works (non-empty pk)
         // Build key including a non-empty pk
         let key = (b"Maria".to_vec(), b"1".to_vec());
-        // Use the index_key() helper to build the (raw) index key
+        // Use the index_key() testing to build the (raw) index key
         let key = map.idx.name.index_key(key);
         // Iterate using a (exclusive) bound over the raw key.
         // (Useful for pagination / continuation contexts).
@@ -380,7 +380,7 @@ mod test {
 
         // index_key() over UniqueIndex works.
         let age_key = U32Key::from(23);
-        // Use the index_key() helper to build the (raw) index key
+        // Use the index_key() testing to build the (raw) index key
         let age_key = map.idx.age.index_key(age_key);
         // Iterate using a (inclusive) bound over the raw key.
         let count = map

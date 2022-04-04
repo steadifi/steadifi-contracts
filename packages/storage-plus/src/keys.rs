@@ -119,7 +119,7 @@ impl<'a> Prefixer<'a> for &'a str {
     }
 }
 
-// this is a marker for the Map.range() helper, so we can detect () in Generic bounds
+// this is a marker for the Map.range() testing, so we can detect () in Generic bounds
 pub trait EmptyPrefix {
     fn new() -> Self;
 }

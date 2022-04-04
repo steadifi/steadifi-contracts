@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::msg::{BalanceResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{ADMIN, BORROW, COLLATERAL, SUPPORTED_ASSETS};
-use crate::helper_functions{can_withdraw}
+use crate::helper_functions::{can_withdraw}; 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -10,7 +10,7 @@ use cosmwasm_std::{
 };
 use cw0::maybe_addr;
 use cw20::Cw20ReceiveMsg;
-use steadifi::{AssetInfo, AssetInfoValidated, NormalAssetInfoValidated};
+use steadifi::{AssetInfoUnvalidated, AssetInfo, NormalAssetInfo};
 
 //TODO make CW2 compliant
 
@@ -50,13 +50,12 @@ pub fn execute(
         // Handling of supported assets
         ExecuteMsg::AddSupportedAsset {
             asset_name,
-            asset_info,
-        } => execute_add_supported_asset(deps, info, asset_name, asset_info),
+            asset_info_unvalidated,
+        } => execute_add_supported_asset(deps, info, asset_name, asset_info_unvalidated),
         ExecuteMsg::RemoveSupportedAsset { asset_name } => {
             execute_remove_supported_asset(deps, info, asset_name)
         }
 
-        // Admin handling
         ExecuteMsg::UpdateAdmin { new_admin } => execute_update_admin(deps, info, new_admin),
     }
 }
@@ -74,8 +73,8 @@ fn execute_update_admin(
 fn execute_native_deposit(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     for coin in info.funds.into_iter() {
         // Check to see if token is on whitelist
-        let asset_info_validated = SUPPORTED_ASSETS.may_load(deps.storage, &coin.denom)?;
-        match asset_info_validated {
+        let asset_info = SUPPORTED_ASSETS.may_load(deps.storage, &coin.denom)?;
+        match asset_info {
             Some(..) => COLLATERAL.update(
                 deps.storage,
                 (&info.sender, &coin.denom),
@@ -93,7 +92,6 @@ fn execute_native_deposit(deps: DepsMut, info: MessageInfo) -> Result<Response, 
 }
 
 ///Native Withdrawals
-///
 fn execute_native_withdraw(
     deps: DepsMut,
     info: MessageInfo,
@@ -102,7 +100,7 @@ fn execute_native_withdraw(
 ) -> Results<Response, ContractError> {
     let address = info.sender;
     // Check if asset is supported
-    if let Some(asset_info_validated) = SUPPORTED_ASSETS.may_load(deps.storage, &coin_denom)? {
+    if let Some(asset_info) = SUPPORTED_ASSETS.may_load(deps.storage, &coin_denom)? {
         let Some(amount) = COLLATERAL
             .may_load(deps.sotrage, (&address, &coin_denom))
             .unwrap_or_default();
@@ -182,11 +180,11 @@ fn execute_cw20_deposit(
     amount: Uint128,
     asset_name: String,
 ) -> Result<Response, ContractError> {
-    if let Some(asset_info_validated) = SUPPORTED_ASSETS.may_load(deps.storage, &asset_name)? {
-        match asset_info_validated {
-            AssetInfoValidated::NormalAsset(normal_asset_info_validated) => {
+    if let Some(asset_info) = SUPPORTED_ASSETS.may_load(deps.storage, &asset_name)? {
+        match asset_info {
+            AssetInfo::NormalAsset(normal_asset_info_validated) => {
                 match normal_asset_info_validated {
-                    NormalAssetInfoValidated::CW20Token { contract_addr, .. } => {
+                    NormalAssetInfo::CW20Token { contract_addr, .. } => {
                         if cw20_contract_addr != contract_addr {
                             return Err(StdError::generic_err
                                            (format!("Address on whitelist and sender contract address for cw20 asset {} do not match", asset_name)).into());
@@ -200,7 +198,7 @@ fn execute_cw20_deposit(
                         )?;
                     }
 
-                    NormalAssetInfoValidated::NativeToken { .. } => {
+                    NormalAssetInfo::NativeToken { .. } => {
                         return Err(StdError::generic_err(format!(
                             "{} corresponds to a native token",
                             asset_name
@@ -210,7 +208,7 @@ fn execute_cw20_deposit(
                 }
             }
 
-            AssetInfoValidated::FutureAsset {
+            AssetInfo::FutureAsset {
                 contract_addr,
                 collateralizeable,
                 ..
@@ -299,19 +297,19 @@ fn execute_add_supported_asset(
     deps: DepsMut,
     info: MessageInfo,
     asset_name: String,
-    asset_info: AssetInfo,
+    asset_info_unvalidated: AssetInfoUnvalidated,
 ) -> Result<Response, ContractError> {
     // Only contract admin can add new supported assets
     ADMIN.assert_admin(deps.as_ref(), &info.sender)?;
 
-    let asset_info_validated = asset_info.to_validated(deps.api)?;
+    let asset_info = asset_info_unvalidated.to_validated(deps.api)?;
     let check_exists = SUPPORTED_ASSETS.may_load(deps.storage, &asset_name)?;
     match check_exists {
         Some(..) => {
             return Err(ContractError::AssetAlreadySupported {});
         }
         None => {
-            SUPPORTED_ASSETS.save(deps.storage, &asset_name, &asset_info_validated)?;
+            SUPPORTED_ASSETS.save(deps.storage, &asset_name, &asset_info)?;
         }
     }
 
@@ -360,9 +358,9 @@ fn query_balance(deps: Deps, address: String, asset_name: String) -> StdResult<B
     Ok(balance_response)
 }
 
-fn query_asset_info(deps: Deps, asset_name: String) -> StdResult<Option<AssetInfoValidated>> {
-    let asset_info = SUPPORTED_ASSETS.may_load(deps.storage, &asset_name)?;
-    Ok(asset_info)
+fn query_asset_info(deps: Deps, asset_name: String) -> StdResult<Option<AssetInfo>> {
+    let asset_info_unvalidated = SUPPORTED_ASSETS.may_load(deps.storage, &asset_name)?;
+    Ok(asset_info_unvalidated)
 }
 
 #[cfg(test)]

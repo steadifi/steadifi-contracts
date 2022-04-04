@@ -2,7 +2,7 @@ use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use steadifi::AssetInfo;
+use steadifi::AssetInfoUnvalidated;
 
 ///////////////////////////////////////////////
 // Instantiate messages
@@ -24,7 +24,7 @@ pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg), //Exactly same operations but for cw20 tokens
     AddSupportedAsset {
         asset_name: String,
-        asset_info: AssetInfo,
+        asset_info_unvalidated: AssetInfoUnvalidated,
     },
     RemoveSupportedAsset {
         asset_name: String,

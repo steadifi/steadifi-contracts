@@ -7,7 +7,7 @@ use cosmwasm_std::testing::{
 };
 use cosmwasm_std::{Api, Decimal};
 use cw_controllers::AdminError;
-use steadifi::{AssetInfo, NormalAssetInfo};
+use steadifi::{AssetInfoUnvalidated, NormalAssetInfoUnvalidated};
 //use cosmwasm_std::{attr, coin, from_binary, BankMsg, OwnedDeps, SubMsg};
 
 // Test initialization works
@@ -40,15 +40,16 @@ fn test_add_supported_assets() {
     // Instantiate contract
     instantiate(deps.as_mut(), env.clone(), info.clone(), instantiate_msg);
     // Add a native asset: "luna"
-    let luna_asset_info = AssetInfo::NormalAsset(NormalAssetInfo::NativeToken {
-        denom: "luna".to_string(),
-        collateralizeable: true,
-        ratio: Decimal::from_ratio(9u32, 10u32),
-        oracle_addr: "luna_oracle_address".to_string(),
-    });
+    let luna_asset_info =
+        AssetInfoUnvalidated::NormalAsset(NormalAssetInfoUnvalidated::NativeToken {
+            denom: "luna".to_string(),
+            collateralizeable: true,
+            ratio: Decimal::from_ratio(9u32, 10u32),
+            oracle_addr: "luna_oracle_address".to_string(),
+        });
     let execute_msg = ExecuteMsg::AddSupportedAsset {
         asset_name: "luna".to_string(),
-        asset_info: luna_asset_info,
+        asset_info_unvalidated: luna_asset_info,
     };
     let contract_result = execute(deps.as_mut(), env.clone(), info.clone(), execute_msg);
     assert_eq!(
@@ -58,15 +59,16 @@ fn test_add_supported_assets() {
             .add_attribute("asset_name", "luna"))
     );
     // Add a cw20 asset
-    let wbtc_asset_info = AssetInfo::NormalAsset(NormalAssetInfo::CW20Token {
-        contract_addr: "wbtc_cw20_address".to_string(),
-        collateralizeable: true,
-        ratio: Decimal::from_ratio(8u32, 10u32),
-        oracle_addr: "wbtc_oracle_address".to_string(),
-    });
+    let wbtc_asset_info =
+        AssetInfoUnvalidated::NormalAsset(NormalAssetInfoUnvalidated::CW20Token {
+            contract_addr: "wbtc_cw20_address".to_string(),
+            collateralizeable: true,
+            ratio: Decimal::from_ratio(8u32, 10u32),
+            oracle_addr: "wbtc_oracle_address".to_string(),
+        });
     let execute_msg = ExecuteMsg::AddSupportedAsset {
         asset_name: "wbtc".to_string(),
-        asset_info: wbtc_asset_info,
+        asset_info_unvalidated: wbtc_asset_info,
     };
     let contract_result = execute(deps.as_mut(), env.clone(), info.clone(), execute_msg);
     assert_eq!(
@@ -76,12 +78,12 @@ fn test_add_supported_assets() {
             .add_attribute("asset_name", "wbtc"))
     );
     // Add a future asset
-    let fbtc_asset_info = AssetInfo::FutureAsset {
+    let fbtc_asset_info = AssetInfoUnvalidated::FutureAsset {
         contract_addr: "fbtc_cw20_address".to_string(),
         collateralizeable: false,
         ratio: Default::default(),
         pool_oracle_addr: "address_to_fbtc/wbtc_pool".to_string(),
-        underlying: NormalAssetInfo::CW20Token {
+        underlying: NormalAssetInfoUnvalidated::CW20Token {
             contract_addr: "wbtc_cw20_address".to_string(),
             collateralizeable: true,
             ratio: Decimal::from_ratio(9u32, 10u32),
@@ -90,7 +92,7 @@ fn test_add_supported_assets() {
     };
     let execute_msg = ExecuteMsg::AddSupportedAsset {
         asset_name: "fbtc".to_string(),
-        asset_info: fbtc_asset_info,
+        asset_info_unvalidated: fbtc_asset_info,
     };
     let contract_result = execute(
         deps.as_mut(),
@@ -127,15 +129,16 @@ fn test_query_assetinfo() {
     // Instantiate contract
     instantiate(deps.as_mut(), env.clone(), info.clone(), instantiate_msg);
     // Add a native asset: "luna"
-    let luna_asset_info = AssetInfo::NormalAsset(NormalAssetInfo::NativeToken {
-        denom: "luna".to_string(),
-        collateralizeable: true,
-        ratio: Decimal::from_ratio(9u32, 10u32),
-        oracle_addr: "luna_oracle_address".to_string(),
-    });
+    let luna_asset_info =
+        AssetInfoUnvalidated::NormalAsset(NormalAssetInfoUnvalidated::NativeToken {
+            denom: "luna".to_string(),
+            collateralizeable: true,
+            ratio: Decimal::from_ratio(9u32, 10u32),
+            oracle_addr: "luna_oracle_address".to_string(),
+        });
     let execute_msg = ExecuteMsg::AddSupportedAsset {
         asset_name: "luna".to_string(),
-        asset_info: luna_asset_info,
+        asset_info_unvalidated: luna_asset_info,
     };
     execute(deps.as_mut(), env.clone(), info.clone(), execute_msg);
 }

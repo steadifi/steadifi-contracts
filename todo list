@@ -1,0 +1,4 @@
+1 Refactor all messages into the packages directory
+2 Add checks for decimal and maybe other things from the cw20 contract itself on upload of supported assets
+3 Just make the collateral manager the mint authority
+4 Fix list of error messages for collateral manager
