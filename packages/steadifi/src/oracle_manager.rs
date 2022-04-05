@@ -1,6 +1,8 @@
-use crate::oracle_manager::Msg::QueryMsg as OracleQueryMsg;
-use cosmwasm_std::{Addr, Api, Decimal, QuerierWrapper, StdResult};
-
+use crate::mars_protocol_math::Decimal;
+use crate::oracle_manager::msg::QueryMsg as OracleQueryMsg;
+use cosmwasm_std::{Addr, Api, QuerierWrapper, StdResult};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 ///Get asset price denominated in USD from the oracle_manager
 pub fn get_oracle_price(
     querier: QuerierWrapper,
@@ -13,7 +15,7 @@ pub fn get_oracle_price(
     } else {
         // TODO: This is wrong need an execute message type here
         querier.query_wasm_smart(
-            oracle_manager_address.into(),
+            oracle_manager_address.as_str(),
             &OracleQueryMsg::GetPrice {
                 asset_name: asset_name.to_string(),
             },
@@ -43,7 +45,9 @@ pub enum OracleUnvalidated {
 impl OracleUnvalidated {
     pub fn to_validated(self, api: &dyn Api) -> StdResult<Oracle> {
         match self {
-            OracleUnvalidated::AstroportTWAP(address_unvalidated) => Ok(Oracle::AstroportTWAP {
+            OracleUnvalidated::AstroportTWAP {
+                address_unvalidated,
+            } => Ok(Oracle::AstroportTWAP {
                 address: api.addr_validate(address_unvalidated.as_str())?,
             }),
             OracleUnvalidated::Native { denom } => Ok(Oracle::Native { denom }),
@@ -51,8 +55,8 @@ impl OracleUnvalidated {
         }
     }
 }
-pub mod Msg {
-    use super::OracleUnvalidated;
+pub mod msg {
+    use super::*;
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
     #[serde(rename_all = "snake_case")]

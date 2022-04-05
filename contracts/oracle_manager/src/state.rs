@@ -1,4 +1,3 @@
-use cosmwasm_std::Addr;
 use cw_controllers::Admin;
 use cw_storage_plus::Map;
 use steadifi::oracle_manager::Oracle;

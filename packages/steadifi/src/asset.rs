@@ -1,12 +1,12 @@
+use crate::mars_protocol_math::Decimal;
+use cosmwasm_std::{Addr, Api, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::{Addr, Api, Decimal, StdResult, Uint128};
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfo {
     FutureAsset {
+        asset_name: String,
         contract_addr: Addr,
         collateralizeable: bool,
         ratio: Decimal,
@@ -19,6 +19,7 @@ pub enum AssetInfo {
 #[serde(rename_all = "snake_case")]
 pub enum NormalAssetInfo {
     CW20Token {
+        asset_name: String,
         contract_addr: Addr,
         collateralizeable: bool,
         ratio: Decimal,
@@ -36,6 +37,7 @@ pub enum NormalAssetInfo {
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfoUnvalidated {
     FutureAsset {
+        asset_name: String,
         contract_addr: String,
         collateralizeable: bool,
         ratio: Decimal,
@@ -48,6 +50,7 @@ pub enum AssetInfoUnvalidated {
 #[serde(rename_all = "snake_case")]
 pub enum NormalAssetInfoUnvalidated {
     CW20Token {
+        asset_name: String,
         contract_addr: String,
         collateralizeable: bool,
         ratio: Decimal,
@@ -65,12 +68,14 @@ impl AssetInfoUnvalidated {
     pub fn to_validated(self, api: &dyn Api) -> StdResult<AssetInfo> {
         match self {
             AssetInfoUnvalidated::FutureAsset {
+                asset_name,
                 contract_addr,
                 collateralizeable,
                 ratio,
                 underlying,
                 decimals,
             } => Ok(AssetInfo::FutureAsset {
+                asset_name,
                 contract_addr: api.addr_validate(contract_addr.as_str())?,
                 collateralizeable,
                 ratio,
@@ -88,11 +93,13 @@ impl NormalAssetInfoUnvalidated {
     pub fn to_validated(self, api: &dyn Api) -> StdResult<NormalAssetInfo> {
         match self {
             NormalAssetInfoUnvalidated::CW20Token {
+                asset_name,
                 contract_addr,
                 ratio,
                 collateralizeable,
                 decimals,
             } => Ok(NormalAssetInfo::CW20Token {
+                asset_name,
                 contract_addr: api.addr_validate(contract_addr.as_str())?,
                 ratio,
                 collateralizeable,
@@ -121,6 +128,24 @@ impl AssetInfo {
             AssetInfo::NormalAsset(normal_asset_info) => match normal_asset_info {
                 NormalAssetInfo::NativeToken { ratio, .. } => ratio.clone(),
                 NormalAssetInfo::CW20Token { ratio, .. } => ratio.clone(),
+            },
+        }
+    }
+    pub fn get_name(&self) -> String {
+        match self {
+            AssetInfo::FutureAsset { asset_name, .. } => asset_name.clone(),
+            AssetInfo::NormalAsset(normal_asset_info) => match normal_asset_info {
+                NormalAssetInfo::NativeToken { denom, .. } => denom.clone(),
+                NormalAssetInfo::CW20Token { asset_name, .. } => asset_name.clone(),
+            },
+        }
+    }
+    pub fn get_decimals(&self) -> Uint128 {
+        match self {
+            AssetInfo::FutureAsset { decimals, .. } => decimals.clone(),
+            AssetInfo::NormalAsset(normal_asset_info) => match normal_asset_info {
+                NormalAssetInfo::NativeToken { decimals, .. } => decimals.clone(),
+                NormalAssetInfo::CW20Token { decimals, .. } => decimals.clone(),
             },
         }
     }

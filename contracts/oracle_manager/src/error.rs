@@ -10,9 +10,9 @@ pub enum ContractError {
     #[error("{0}")]
     ControllerError(#[from] AdminError),
 
-    #[error(display = "No oracle registered for asset {}"), _0]
-    OracleNotFound(String),
+    #[error("No oracle registered for asset {}", asset_name)]
+    OracleNotFound { asset_name: String },
 
     #[error("Oracle for Native asset returned an error")]
-    NativePriceNotFound {}
+    NativePriceNotFound {},
 }
