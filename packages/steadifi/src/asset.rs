@@ -124,10 +124,10 @@ impl NormalAssetInfoUnvalidated {
 impl AssetInfo {
     pub fn get_ratio(&self) -> Decimal {
         match self {
-            AssetInfo::FutureAsset { ratio, .. } => ratio.clone(),
+            AssetInfo::FutureAsset { ratio, .. } => *ratio,
             AssetInfo::NormalAsset(normal_asset_info) => match normal_asset_info {
-                NormalAssetInfo::NativeToken { ratio, .. } => ratio.clone(),
-                NormalAssetInfo::CW20Token { ratio, .. } => ratio.clone(),
+                NormalAssetInfo::NativeToken { ratio, .. } => *ratio,
+                NormalAssetInfo::CW20Token { ratio, .. } => *ratio,
             },
         }
     }
@@ -142,10 +142,10 @@ impl AssetInfo {
     }
     pub fn get_decimals(&self) -> Uint128 {
         match self {
-            AssetInfo::FutureAsset { decimals, .. } => decimals.clone(),
+            AssetInfo::FutureAsset { decimals, .. } => *decimals,
             AssetInfo::NormalAsset(normal_asset_info) => match normal_asset_info {
-                NormalAssetInfo::NativeToken { decimals, .. } => decimals.clone(),
-                NormalAssetInfo::CW20Token { decimals, .. } => decimals.clone(),
+                NormalAssetInfo::NativeToken { decimals, .. } => *decimals,
+                NormalAssetInfo::CW20Token { decimals, .. } => *decimals,
             },
         }
     }
