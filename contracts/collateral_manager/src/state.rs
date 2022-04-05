@@ -1,8 +1,9 @@
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_controllers::Admin;
 use cw_storage_plus::{Item, Map};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use steadifi::AssetInfo;
-
 // Maps string containing name of asset to the AssetInfo struct which contains its information
 pub const SUPPORTED_ASSETS: Map<&str, AssetInfo> = Map::new("supported_assets");
 
@@ -18,9 +19,10 @@ pub const BORROW: Map<(&Addr, &str), Uint128> = Map::new("borrow");
 pub const ADMIN: Admin = Admin::new("admin");
 
 //Contract config
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct Config {
     pub max_ltv: Decimal,
-    pub oracle_addr: Addr,
+    pub oracle_manager_addr: Addr,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");

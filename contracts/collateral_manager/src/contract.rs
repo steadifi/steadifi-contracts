@@ -1,16 +1,16 @@
 use crate::error::ContractError;
+use crate::helper::can_withdraw;
 use crate::msg::{BalanceResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{ADMIN, BORROW, COLLATERAL, SUPPORTED_ASSETS};
-use crate::helper_functions::{can_withdraw}; 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdError, StdResult, Uint128,
+    from_binary, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, Uint128,
 };
 use cw0::maybe_addr;
 use cw20::Cw20ReceiveMsg;
-use steadifi::{AssetInfoUnvalidated, AssetInfo, NormalAssetInfo};
+use steadifi::{AssetInfo, AssetInfoUnvalidated, NormalAssetInfo};
 
 //TODO make CW2 compliant
 
@@ -96,64 +96,44 @@ fn execute_native_withdraw(
     deps: DepsMut,
     info: MessageInfo,
     coin_denom: String,
-    amount: Uint128,
-) -> Results<Response, ContractError> {
+    withdraw_amount: Uint128,
+) -> Result<Response, ContractError> {
     let address = info.sender;
     // Check if asset is supported
     if let Some(asset_info) = SUPPORTED_ASSETS.may_load(deps.storage, &coin_denom)? {
-        let Some(amount) = COLLATERAL
-            .may_load(deps.sotrage, (&address, &coin_denom))
+        let Some(current_amount) = COLLATERAL
+            .may_load(deps.storage, (&address, &coin_denom))
             .unwrap_or_default();
-        if amount.is_zero() {
+        // Current amount shouldn't be zero
+        if current_amount.is_zero() {
             return Err(ContractError::AssetIsZero {});
         }
-        // Check collateral requirements
-        if
-
-
-
-
+        // Withdraw amount should be less or equal to current amount
+        if let Err(_) = current_amount.checked_sub(withdraw_amount) {
+            return Err(ContractError::NotEnoughAsset {
+                coin_denom,
+                current_amount,
+                withdraw_amount,
+            });
+        }
+        // Check collateral requirements with oracle prices and corresponding rations
+        if can_withdraw(&deps, &address, asset_info, withdraw_amount)? == false {
+            return Err(ContractError::NotEnoughTotalCollateral {});
+        }
     } else {
-        //may_load returned Ok(None)
+        //Asset not supported by contract
         return Err(ContractError::AssetNotSupported {});
     }
 
     let response = Response::new();
     response.add_message(CosmosMsg::Bank(BankMsg::Send {
-        to_address: recipient_address.into(),
-        amount: vec![deduct_tax(deps, Coin { denom, amount })?],
+        to_address: address.into(),
+        amount: vec![Coin {
+            denom: coin_denom,
+            amount: withdraw_amount,
+        }],
     }));
     Ok(response)
-}
-
-pub fn build_send_asset_with_tax_deduction_msg(
-    deps: Deps,
-    recipient_address: Addr,
-    asset_label: String,
-    asset_type: AssetType,
-    amount: Uint128,
-) -> StdResult<CosmosMsg> {
-    match asset_type {
-        AssetType::Native => Ok(build_send_native_asset_with_tax_deduction_msg(
-            deps,
-            recipient_address,
-            asset_label,
-            amount,
-        )?),
-        AssetType::Cw20 => build_send_cw20_token_msg(recipient_address, asset_label, amount),
-    }
-}
-
-pub fn build_send_native_asset_with_tax_deduction_msg(
-    deps: Deps,
-    recipient_address: Addr,
-    denom: String,
-    amount: Uint128,
-) -> StdResult<CosmosMsg> {
-    Ok(CosmosMsg::Bank(BankMsg::Send {
-        to_address: recipient_address.into(),
-        amount: vec![deduct_tax(deps, Coin { denom, amount })?],
-    }))
 }
 
 fn execute_receive_cw20(
@@ -167,7 +147,7 @@ fn execute_receive_cw20(
             let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
             execute_cw20_deposit(deps, cw20_sender, info.sender, cw20_msg.amount, asset_name)
         }
-        Ok(Cw20HookMsg::Withdraw {}) => {}
+        Ok(Cw20HookMsg::Withdraw { asset_name, amount }) => Ok(Response::new()),
         Err(_) => Err(StdError::generic_err("invalid cw20 hook message").into()),
     }
 }
