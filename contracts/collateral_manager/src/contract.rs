@@ -101,8 +101,8 @@ fn execute_native_withdraw(
     let address = info.sender;
     // Check if asset is supported
     if let Some(asset_info) = SUPPORTED_ASSETS.may_load(deps.storage, &coin_denom)? {
-        let Some(current_amount) = COLLATERAL
-            .may_load(deps.storage, (&address, &coin_denom))
+        let current_amount = COLLATERAL
+            .may_load(deps.storage, (&address, &coin_denom))?
             .unwrap_or_default();
         // Current amount shouldn't be zero
         if current_amount.is_zero() {
@@ -125,8 +125,7 @@ fn execute_native_withdraw(
         return Err(ContractError::AssetNotSupported {});
     }
 
-    let response = Response::new();
-    response.add_message(CosmosMsg::Bank(BankMsg::Send {
+    let response = Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
         to_address: address.into(),
         amount: vec![Coin {
             denom: coin_denom,
@@ -147,7 +146,8 @@ fn execute_receive_cw20(
             let cw20_sender = deps.api.addr_validate(cw20_msg.sender.as_str())?;
             execute_cw20_deposit(deps, cw20_sender, info.sender, cw20_msg.amount, asset_name)
         }
-        Ok(Cw20HookMsg::Withdraw { asset_name, amount }) => Ok(Response::new()),
+        Ok(Cw20HookMsg::Withdraw { .. }) => Ok(Response::new()),
+        Ok(_) => Ok(Response::new()),
         Err(_) => Err(StdError::generic_err("invalid cw20 hook message").into()),
     }
 }

@@ -14,9 +14,6 @@ pub enum ContractError {
     #[error("{0}")]
     UTF8Error(#[from] Utf8Error),
 
-    #[error("Unauthorized")]
-    Unauthorized {},
-
     #[error("Asset already supported")]
     AssetAlreadySupported {},
 
