@@ -1,0 +1,4 @@
+86a209f4455b7142607d1ed40bb7ee480e90c1850c287ee8c13a8f1a2cae3968  target/wasm32-unknown-unknown/release/collateral_manager.wasm
+774a515f7bfcf727d08fe472041be9684254787b8c01b3df329733e5363951db  target/wasm32-unknown-unknown/release/cw20_base.wasm
+364c67cc4f260ad9905af7eb7dde61afbfc858dae0f4d4ccead85703369a1815  target/wasm32-unknown-unknown/release/mint_authority.wasm
+0182fe9e1995ba7a62857b464e680124fd544b0696d901ec39238893a774a0aa  target/wasm32-unknown-unknown/release/oracle.wasm
