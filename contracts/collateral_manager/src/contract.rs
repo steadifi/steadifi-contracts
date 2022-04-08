@@ -1,6 +1,5 @@
 use crate::error::ContractError;
 use crate::helper::can_withdraw;
-use crate::msg::{BalanceResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{ADMIN, BORROW, COLLATERAL, SUPPORTED_ASSETS};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -10,6 +9,9 @@ use cosmwasm_std::{
 };
 use cw0::maybe_addr;
 use cw20::Cw20ReceiveMsg;
+use steadifi::collateral_manager::msg::{
+    BalanceResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
+};
 use steadifi::{AssetInfo, AssetInfoUnvalidated, NormalAssetInfo};
 
 //TODO make CW2 compliant

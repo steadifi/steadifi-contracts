@@ -28,6 +28,7 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.23" }
 cw-controllers = { path = "../../packages/controllers", version = "0.9.0" }
 steadifi = { path = "../../packages/steadifi", version = "0.0.0" }
+
 terra-cosmwasm = {version = "2.2.0"}
 [dev-dependencies]
 cosmwasm-schema = { version = "0.16.0" }

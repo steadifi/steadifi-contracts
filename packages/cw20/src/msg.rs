@@ -1,10 +1,9 @@
+use crate::logo::Logo;
+use cosmwasm_std::{to_binary, CosmosMsg, WasmMsg};
+use cosmwasm_std::{Binary, StdResult, Uint128};
+use cw0::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::logo::Logo;
-use cosmwasm_std::{Binary, Uint128, StdResult};
-use cw0::Expiration;
-use cosmwasm_std::{CosmosMsg, WasmMsg, to_binary} ;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -71,7 +70,6 @@ pub enum Cw20ExecuteMsg {
     UploadLogo(Logo),
 }
 
-
 impl Cw20ExecuteMsg {
     /// creates a cosmos_msg sending this struct to contract_addr
     pub fn into_cosmos_msg<T: Into<String>>(self, contract_addr: T) -> StdResult<CosmosMsg> {
@@ -83,6 +81,4 @@ impl Cw20ExecuteMsg {
         };
         Ok(execute.into()) //Convert to CosmosMsg
     }
-
-
 }
