@@ -7,4 +7,5 @@ projectPath=$(cd "$(dirname "${0}")" && cd ../ && pwd)
 for c in "$projectPath"/contracts/*; do
   if [[ "$c" != *"cw20-base" ]]; then
       (cd $c && cargo schema)
+  fi
 done

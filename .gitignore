@@ -1,6 +1,5 @@
 .idea/
 .DS_Store
-artifacts
 /target/
 Cargo.lock
 todo list
