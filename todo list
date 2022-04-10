@@ -1,6 +1,0 @@
-1 Refactor all messages into the packages directory instead of keeping it in contracts
-2 Add checks for decimal and maybe other things from the cw20 contract itself on upload of supported assets
-3 Just make the collateral manager the mint authority (maybe)?
-4 Put more informative error messages for collateral manager and oracle_manager. 
-5 Implement the mars protocol math library as a an external trait for Decimal instead of defining a totally new type
-6 Implement a power operation for Decimal
