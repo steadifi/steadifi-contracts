@@ -1,3 +1,13 @@
 [workspace]
 members = ["contracts/*", "packages/*"]
 
+[profile.release]
+opt-level = 3
+debug = false  # do not include any debug info in binary
+rpath = false  # do not include rpath in executable
+lto = true  # link-time optimizations with whole-program analysis
+debug-assertions = false  # conditional compilation of debug_assert! and cfg(debug_assertions)
+codegen-units = 1  # disables parallel compilation but improves optimizations
+panic = 'abort'  # terminate upon panic
+incremental = false  # compile from scratch every time
+overflow-checks = true  # enable overflow checks
