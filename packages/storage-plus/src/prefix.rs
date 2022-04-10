@@ -1,8 +1,8 @@
 #![cfg(feature = "iterator")]
+use cosmwasm_std::{Order, Pair, StdResult, Storage};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::marker::PhantomData;
-use cosmwasm_std::{Order, Pair, StdResult, Storage};
 use std::ops::Deref;
 
 use crate::helpers::nested_namespaces_with_key;

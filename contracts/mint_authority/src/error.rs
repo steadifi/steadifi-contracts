@@ -23,6 +23,4 @@ pub enum ContractError {
 
     #[error("Minting cannot exceed the cap")]
     CannotExceedCap {},
-
-
 }

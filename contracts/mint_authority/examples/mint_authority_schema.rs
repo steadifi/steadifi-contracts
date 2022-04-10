@@ -4,7 +4,7 @@ use std::fs::create_dir_all;
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 use mint_authority::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use mint_authority::state::MintAuthorityInfo ;
+use mint_authority::state::MintAuthorityInfo;
 fn main() {
     let mut out_dir = current_dir().unwrap();
     out_dir.push("schema");
