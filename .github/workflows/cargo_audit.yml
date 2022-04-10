@@ -1,0 +1,25 @@
+name: Audit pipeline using cargo-audit
+
+on:
+  push:
+    paths:
+      - '**/Cargo.toml'  # Run when dependencies change
+      - '**/Cargo.lock'
+  schedule:
+    - cron: '0 0 * * *'  # Run at midnight every day
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checking out repository
+      uses: actions/checkout@v3
+
+    - name: Running cargo audit
+      uses: actions-rs/audit-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}

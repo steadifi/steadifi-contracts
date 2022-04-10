@@ -1,0 +1,57 @@
+name: Contracts formatting checks and tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Testing pipeline
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - 1.56.1
+
+    steps:
+    - name: Checking out repository
+      uses: actions/checkout@v3
+
+    - name: Setting up toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust }}
+        override: true
+        components: rustfmt, clippy
+
+    - name: Building all packages
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose
+
+    - name: Running tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --verbose --no-fail-fast --locked
+      env:
+        RUST_BACKTRACE: 1
+
+    - name: Running cargo clippy
+      uses: actions-rs/cargo@v1
+      with:
+        command: clippy
+        args: -- -D warnings
+
+    - name: Running cargo fmt
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
