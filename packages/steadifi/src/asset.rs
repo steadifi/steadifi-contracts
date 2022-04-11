@@ -2,6 +2,7 @@ use crate::mars_protocol_math::Decimal;
 use cosmwasm_std::{Addr, Api, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfo {
@@ -15,6 +16,7 @@ pub enum AssetInfo {
     },
     NormalAsset(NormalAssetInfo),
 }
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum NormalAssetInfo {
@@ -46,6 +48,7 @@ pub enum AssetInfoUnvalidated {
     },
     NormalAsset(NormalAssetInfoUnvalidated),
 }
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum NormalAssetInfoUnvalidated {

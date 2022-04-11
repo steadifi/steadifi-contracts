@@ -3,12 +3,17 @@ use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
 pub mod msg {
-    use super::*;
+    use super::{
+        AssetInfoUnvalidated, Cw20ReceiveMsg, Deserialize, JsonSchema, Serialize, Uint128,
+    };
+
     ///////////////////////////////////////////////
     // Instantiate messages
     #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
     pub struct InstantiateMsg {}
+
     //////////////////////////////////////////////
     // Execute messages
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -62,8 +67,8 @@ pub mod msg {
         AssetInfo { asset_name: String },
     }
 
-    #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
     /// amount of collateral and borrow. At most one of these two can be non-zero.
+    #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
     pub struct BalanceResponse {
         pub collateral: Uint128,
         pub borrow: Uint128,

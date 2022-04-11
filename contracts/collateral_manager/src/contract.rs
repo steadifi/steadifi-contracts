@@ -1,6 +1,3 @@
-use crate::error::ContractError;
-use crate::helper::can_withdraw;
-use crate::state::{ADMIN, BORROW, COLLATERAL, SUPPORTED_ASSETS};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -9,6 +6,10 @@ use cosmwasm_std::{
 };
 use cw0::maybe_addr;
 use cw20::Cw20ReceiveMsg;
+
+use crate::error::ContractError;
+use crate::helper::can_withdraw;
+use crate::state::{ADMIN, BORROW, COLLATERAL, SUPPORTED_ASSETS};
 use steadifi::collateral_manager::msg::{
     BalanceResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
@@ -28,6 +29,7 @@ pub fn instantiate(
     ADMIN.set(deps.branch(), Some(info.sender))?;
     Ok(Response::default())
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //Executes
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -61,6 +63,7 @@ pub fn execute(
         ExecuteMsg::UpdateAdmin { new_admin } => execute_update_admin(deps, info, new_admin),
     }
 }
+
 fn execute_update_admin(
     deps: DepsMut,
     info: MessageInfo,

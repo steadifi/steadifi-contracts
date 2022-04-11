@@ -1,15 +1,17 @@
-use crate::error::ContractError;
-use crate::state::{ADMIN, ORACLE};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw0::maybe_addr;
+use terra_cosmwasm::TerraQuerier; //TODO: What the hell is this
+
+use crate::error::ContractError;
+use crate::state::{ADMIN, ORACLE};
 use steadifi::mars_protocol_math::Decimal;
 use steadifi::oracle_manager::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use steadifi::oracle_manager::{Oracle, OracleUnvalidated};
-use terra_cosmwasm::TerraQuerier; //TODO: What the hell is this
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
