@@ -1,7 +1,9 @@
+use std::str;
+
+use cosmwasm_std::{Addr, DepsMut, Order, Pair, StdResult, Uint128};
+
 use crate::error::ContractError;
 use crate::state::{BORROW, COLLATERAL, CONFIG, SUPPORTED_ASSETS};
-use cosmwasm_std::{Addr, DepsMut, Order, Pair, StdResult, Uint128};
-use std::str;
 use steadifi::mars_protocol_math::Decimal;
 use steadifi::oracle_manager::get_oracle_price;
 use steadifi::AssetInfo;

@@ -7,6 +7,7 @@ use cosmwasm_std::{
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{MintAuthorityInfo, MINT_AUTHORITY_INFO};
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -51,7 +52,7 @@ pub fn execute(
                 .add_message(
                     cw20::Cw20ExecuteMsg::Mint {
                         recipient: rcpt_addr.to_string(),
-                        amount: amount,
+                        amount,
                     }
                     .into_cosmos_msg(cw20_contract_address)?,
                 );
@@ -61,16 +62,16 @@ pub fn execute(
     res
 }
 
-fn get_cw20_address(deps: &DepsMut) -> StdResult<Addr> {
-    let info = MINT_AUTHORITY_INFO.load(deps.storage)?;
-    Ok(info.address_cw20)
-}
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::MintAuthorityInfo {} => to_binary(&query_mint_authority_info(deps)?),
     }
+}
+
+fn get_cw20_address(deps: &DepsMut) -> StdResult<Addr> {
+    let info = MINT_AUTHORITY_INFO.load(deps.storage)?;
+    Ok(info.address_cw20)
 }
 
 fn query_mint_authority_info(deps: Deps) -> StdResult<MintAuthorityInfo> {
