@@ -10,10 +10,10 @@ use cw20::Cw20ReceiveMsg;
 use crate::error::ContractError;
 use crate::helper::can_withdraw;
 use crate::state::{ADMIN, BORROW, COLLATERAL, SUPPORTED_ASSETS};
+use steadifi::asset::{AssetInfo, AssetInfoUnvalidated, NormalAssetInfo};
 use steadifi::collateral_manager::msg::{
     BalanceResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
-use steadifi::{AssetInfo, AssetInfoUnvalidated, NormalAssetInfo};
 
 //TODO make CW2 compliant
 

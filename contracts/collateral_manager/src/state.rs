@@ -3,7 +3,7 @@ use cw_controllers::Admin;
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use steadifi::AssetInfo;
+use steadifi::asset::AssetInfo;
 
 // Maps string containing name of asset to the AssetInfo struct which contains its information
 pub const SUPPORTED_ASSETS: Map<&str, AssetInfo> = Map::new("supported_assets");

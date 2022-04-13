@@ -4,9 +4,9 @@ use cosmwasm_std::{Addr, DepsMut, Order, Pair, StdResult, Uint128};
 
 use crate::error::ContractError;
 use crate::state::{BORROW, COLLATERAL, CONFIG, SUPPORTED_ASSETS};
+use steadifi::asset::AssetInfo;
 use steadifi::mars_protocol_math::Decimal;
 use steadifi::oracle_manager::get_oracle_price;
-use steadifi::AssetInfo;
 
 ///Returns Ok(true) if address has enough collateral to withdraw amount value of the given asset
 /// and Ok(false) otherwise

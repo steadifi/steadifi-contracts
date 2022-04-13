@@ -7,7 +7,7 @@ use cosmwasm_std::testing::{
 };
 use cosmwasm_std::{Api, Decimal};
 use cw_controllers::AdminError;
-use steadifi::{AssetInfoUnvalidated, NormalAssetInfoUnvalidated};
+use steadifi::asset::{AssetInfoUnvalidated, NormalAssetInfoUnvalidated};
 //use cosmwasm_std::{attr, coin, from_binary, BankMsg, OwnedDeps, SubMsg};
 
 // Test initialization works

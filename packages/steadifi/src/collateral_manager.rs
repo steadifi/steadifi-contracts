@@ -1,4 +1,4 @@
-use crate::AssetInfoUnvalidated;
+use crate::asset::AssetInfoUnvalidated;
 use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
