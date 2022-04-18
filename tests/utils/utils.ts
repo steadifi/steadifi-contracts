@@ -5,7 +5,9 @@
 // execute functions of contract
 // Transfer ownership of contract
 // Make contract use different code by changing the code ID (aka migrating)
-//
+
+import path from 'path';
+import { execSync } from 'child_process';
 import { LocalTerra, LCDClient } from '@terra-money/terra.js';
 
 export function createLCDClient():LCDClient {
@@ -21,6 +23,7 @@ export function createLCDClient():LCDClient {
       + " Only acceptable values are 'TRUE' and 'FALSE'.");
 }
 
-export function anotherFunc() {
-
+export function buildArtifacts() {
+  const buildScriptPath = path.normalize(path.join(process.env.SCRIPTS_PATH as string, 'build_release.sh'));
+  execSync(buildScriptPath);
 }

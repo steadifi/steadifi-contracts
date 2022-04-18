@@ -5,6 +5,7 @@ dotenv.config();
 import path from 'path';
 import compose from 'docker-compose';
 import Context from './utils/context';
+import { buildArtifacts } from './utils/utils';
 /* eslint-enable */
 
 /* eslint-disable no-console */
@@ -19,6 +20,10 @@ export default async () => {
     console.log('Starting LocalTerra...');
     await compose.upAll({ cwd: localterraPath });
   }
+
+  console.log('Building artifacts...');
+  buildArtifacts();
+
   const ctx = Context.instance();
   // Deploy contracts
 
