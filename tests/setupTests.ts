@@ -1,3 +1,5 @@
-module.exports = async () => {
-  console.log('Set up testing once!');
-};
+import Context from './utils/context';
+
+beforeAll(() => {
+  Context.fromFile();
+});
