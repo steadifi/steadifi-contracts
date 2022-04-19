@@ -2,6 +2,7 @@ import fs from 'fs';
 import { LCDClient } from '@terra-money/terra.js';
 
 import { createLCDClient } from './utils';
+import getMnemonicKey from './testAccounts';
 
 class Context {
   static #filename: string = './.tmp_context';
@@ -14,18 +15,22 @@ class Context {
     return this.#client;
   }
 
-  private constructor() {
-    this.#client = createLCDClient();
+  public getTestWallet(name: Parameters<typeof getMnemonicKey>[0]) {
+    return this.client.wallet(getMnemonicKey(name));
   }
 
   public toFile() {
-    const data = {};
-    fs.writeFileSync(Context.#filename, JSON.stringify(data), 'utf8');
+    fs.writeFileSync(Context.#filename, JSON.stringify(this), 'utf8');
+  }
+
+  private constructor() {
+    this.#client = createLCDClient();
   }
 
   public static fromFile() {
     const ctx = Context.instance();
     const data = JSON.parse(fs.readFileSync(this.#filename, 'utf8'));
+    Object.assign(ctx, data);
     return ctx;
   }
 
