@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 import path from 'path';
 
 // TODO: Add address field
@@ -6,14 +7,12 @@ import path from 'path';
 // TODO: Get InitMsg (e.g how the contract was instantiated)
 // TODO: Maybe add functionality to parse and print JSON expected format
 
-class Contract {
-  #codeId: number;
+export class CodeInfo {
+  #data: CodeInfo.Data;
 
-  #wasmPath: path.ParsedPath;
-
-  constructor(codeId:number, wasmPath:string) {
-    this.#codeId = codeId;
-    this.#wasmPath = path.parse(path.normalize(wasmPath));
+  constructor(codeId:string, wasmPath:string) {
+    const data: CodeInfo.Data = { codeId, wasmPath: path.normalize(wasmPath) };
+    this.#data = data;
   }
 
   /**
@@ -23,25 +22,54 @@ class Contract {
    * @return a string as a friendly name for the smart contract
    */
   public get name() {
-    return this.#wasmPath.name;
+    return path.parse(path.normalize(this.#data.wasmPath)).name;
   }
 
   /**
    * Each WASM bytecode obtains a code ID when first uploaded onto the
    * blockchain. This code ID can be used to initialize multiple instances
    * of the contract, all sharing the same underlying logic.
-   * @return a number representing the codeId of the contract
+   * @return a number representing the codeId
    */
   public get codeId() {
-    return this.#codeId;
+    return this.#data.codeId;
   }
 
   /**
    * @return the original path to the file containing the WASM bytecode
    */
   public get wasmPath() {
-    return this.#wasmPath;
+    return this.#data.wasmPath;
+  }
+
+  public toData() {
+    return this.#data;
+  }
+
+  public static fromData(data: CodeInfo.Data) {
+    return new this(data.codeId, data.wasmPath);
   }
 }
 
-export default Contract;
+/* eslint-disable-next-line no-redeclare */
+export namespace CodeInfo {
+  export interface Data {
+    codeId: string,
+    wasmPath: string
+  }
+}
+
+export class Contract {
+  #codeInfo: CodeInfo;
+
+  constructor(codeInfo: CodeInfo) {
+    this.#codeInfo = codeInfo;
+  }
+
+  /**
+   * @return a CodeInfo object
+   */
+  public get codeInfo() {
+    return this.#codeInfo;
+  }
+}

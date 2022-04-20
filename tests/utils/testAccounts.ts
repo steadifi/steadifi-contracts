@@ -14,6 +14,8 @@ const testAccounts = {
   test10: 'prefer forget visit mistake mixture feel eyebrow autumn shop pair address airport diesel street pass vague innocent poem method awful require hurry unhappy shoulder',
 };
 
-export default function getMnemonicKey(name: keyof typeof testAccounts) {
+export type TestAccountName = keyof typeof testAccounts;
+
+export function getMnemonicKey(name: TestAccountName) {
   return new MnemonicKey({ mnemonic: testAccounts[name] });
 }
