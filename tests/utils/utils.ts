@@ -44,7 +44,7 @@ export function createLCDClient():LCDClient {
  * @return void
  */
 export function buildArtifacts() {
-  const buildScriptPath = path.normalize(path.join(process.env.SCRIPTS_PATH as string, 'build_release.sh'));
+  const buildScriptPath = path.resolve(path.normalize(path.join(process.env.SCRIPTS_PATH as string, 'build_release.sh')));
   execSync(buildScriptPath);
 }
 

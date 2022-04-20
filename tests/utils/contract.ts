@@ -11,7 +11,7 @@ export class CodeInfo {
   #data: CodeInfo.Data;
 
   constructor(codeId:string, wasmPath:string) {
-    const data: CodeInfo.Data = { codeId, wasmPath: path.normalize(wasmPath) };
+    const data: CodeInfo.Data = { codeId, wasmPath: path.resolve(path.normalize(wasmPath)) };
     this.#data = data;
   }
 
@@ -22,7 +22,7 @@ export class CodeInfo {
    * @return a string as a friendly name for the smart contract
    */
   public get name() {
-    return path.parse(path.normalize(this.#data.wasmPath)).name;
+    return path.parse(path.resolve(path.normalize(this.#data.wasmPath))).name;
   }
 
   /**

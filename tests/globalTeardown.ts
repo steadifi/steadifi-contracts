@@ -11,7 +11,7 @@ export default async () => {
   console.log('');
 
   if (process.env.LOCALTERRA_PATH) {
-    const localterraPath = path.normalize(path.join(process.env.LOCALTERRA_PATH));
+    const localterraPath = path.resolve(path.normalize(path.join(process.env.LOCALTERRA_PATH)));
 
     console.log('Stopping LocalTerra...');
     await compose.stop({ cwd: localterraPath });

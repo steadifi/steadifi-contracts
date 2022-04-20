@@ -15,7 +15,7 @@ export default async () => {
 
   if (process.env.LOCALTERRA_PATH) {
     console.log('Resetting LocalTerra state...');
-    const localterraPath = path.normalize(path.join(process.env.LOCALTERRA_PATH));
+    const localterraPath = path.resolve(path.normalize(path.join(process.env.LOCALTERRA_PATH)));
     await compose.rm({ cwd: localterraPath });
 
     console.log('Starting LocalTerra...');
@@ -35,11 +35,12 @@ export default async () => {
   const ctx = Context.instance();
 
   if (process.env.ARTIFACTS_PATH) {
-    const artifactsPath = path.normalize(process.env.ARTIFACTS_PATH);
+    const artifactsPath = path.resolve(path.normalize(process.env.ARTIFACTS_PATH));
     const wasmPaths = glob.sync(`${artifactsPath}/**/*.wasm`);
     const wallet = ctx.getTestWallet('test1');
     for (let i = 0; i < wasmPaths.length; i++) {
-      const fullpath = path.normalize(wasmPaths[i]);
+      const fullpath = path.resolve(path.normalize(wasmPaths[i]));
+      console.log(`Storing bytecode from ${fullpath}`);
       /* eslint-disable-next-line no-await-in-loop */
       const codeId = await storeCode(ctx.client, wallet, fullpath);
       ctx.addCodeInfo(codeId, fullpath);
