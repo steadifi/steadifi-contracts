@@ -6,7 +6,7 @@ import glob from 'glob'
 import path from 'path';
 import compose from 'docker-compose';
 import Context from './utils/context';
-import { buildArtifacts, storeCode } from './utils/utils';
+import { buildArtifacts, storeCode, listenForBlockAtHeight } from './utils/utils';
 /* eslint-enable */
 
 /* eslint-disable no-console */
@@ -30,9 +30,9 @@ export default async () => {
         + " Only acceptable values are 'TRUE' and 'FALSE'.");
   }
 
-  // TODO: Wait till block 1 has been produced
-
   const ctx = Context.instance();
+
+  await listenForBlockAtHeight(1);
 
   if (process.env.ARTIFACTS_PATH) {
     const artifactsPath = path.resolve(path.normalize(process.env.ARTIFACTS_PATH));

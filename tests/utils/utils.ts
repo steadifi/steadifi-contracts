@@ -10,7 +10,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import {
   LocalTerra, LCDClient, Wallet, Msg, MsgStoreCode,
-  Fee, Int, Dec, Coin, isTxError,
+  Fee, Int, Dec, Coin, isTxError, WebSocketClient,
 } from '@terra-money/terra.js';
 import { getMnemonicKey, TestAccountName } from './testAccounts';
 import TxResult from './txResult';
@@ -46,6 +46,31 @@ export function createLCDClient():LCDClient {
 export function buildArtifacts() {
   const buildScriptPath = path.resolve(path.normalize(path.join(process.env.SCRIPTS_PATH as string, 'build_release.sh')));
   execSync(buildScriptPath);
+}
+
+/**
+ * Uses websockets to listen for new blocks. The promise resolves when a block height
+ * greater or equal than blockHeight is reached
+ *
+ * example usage:
+ * await listenForBlockAtHeight(10);
+ *
+ * The above example will wait until block 10 has been reached
+ * @param  blockHeight                Block height to look for
+ * @param  websocketUrl               websocket URL to connect. Default is for LocalTerra
+ * @return The block height that resolved the promise.
+ */
+export async function listenForBlockAtHeight(blockHeight: number, websocketUrl:string = 'ws://localhost:26657/websocket') {
+  return new Promise((resolve) => {
+    const wsclient = new WebSocketClient(websocketUrl, 3);
+    wsclient.subscribe('NewBlockHeader', {}, (data) => {
+      if (parseInt(data.value.header.height, 10) >= blockHeight) {
+        wsclient.destroy();
+        resolve(parseInt(data.value.header.height, 10));
+      }
+    });
+    wsclient.start();
+  });
 }
 
 /**
