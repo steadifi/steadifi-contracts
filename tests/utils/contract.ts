@@ -2,8 +2,6 @@
 import path from 'path';
 
 // TODO: Add address field
-// TODO: Add more helper functions such as get owner etc etc
-//       helpers should do minimal work and mostly use functions defined in utils.ts
 // TODO: Get InitMsg (e.g how the contract was instantiated)
 // TODO: Maybe add functionality to parse and print JSON expected format
 

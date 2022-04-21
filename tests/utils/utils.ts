@@ -1,6 +1,4 @@
-// Helper functions to deploy contract
 // Helper functions to instantiate contract
-// Get owner of contract
 // query contract
 // execute functions of contract
 // Transfer ownership of contract
@@ -10,7 +8,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import {
   LocalTerra, LCDClient, Wallet, Msg, MsgStoreCode,
-  Fee, Int, Dec, Coin, isTxError, WebSocketClient,
+  Fee, Int, Dec, Numeric, Coin, isTxError, WebSocketClient,
 } from '@terra-money/terra.js';
 import { getMnemonicKey, TestAccountName } from './testAccounts';
 import TxResult from './txResult';
@@ -91,7 +89,7 @@ export function getTestWallet(client: LCDClient, name: TestAccountName) {
  * @param  amount               The amount to convert, e.g '10.5'
  * @return        A string representing the amount in microUnits e.g 10500000
  */
-export function toMicroUnit(amount: string) {
+export function toMicroUnit(amount: Numeric.Input) {
   const dec = new Dec(amount);
   return dec.toDecimalPlaces(6).mul(10 ** 6).toFixed(0);
 }
@@ -101,7 +99,7 @@ export function toMicroUnit(amount: string) {
  * @param  amount               The amount to convert, e.g '1000000'
  * @return        A string representing the converted amount e.g '1.000000'
  */
-export function fromMicroUnit(amount: string) {
+export function fromMicroUnit(amount: Numeric.Input) {
   const int = new Int(amount);
   return int.dividedBy(10 ** 6).toFixed(6);
 }

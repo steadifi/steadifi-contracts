@@ -56,7 +56,7 @@ class Context {
 }
 
 /* eslint-disable-next-line no-redeclare */
-export namespace Context {
+namespace Context {
   export interface Data {
     codes: {[name:string] : CodeInfo.Data};
   }
