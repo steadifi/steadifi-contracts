@@ -1,14 +1,14 @@
-// Helper functions to instantiate contract
 // query contract
 // execute functions of contract
 // Transfer ownership of contract
 // Make contract use different code by changing the code ID (aka migrating)
+// Query non-native token balance
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import {
-  LocalTerra, LCDClient, Wallet, Msg, MsgStoreCode,
-  Fee, Int, Dec, Numeric, Coin, isTxError, WebSocketClient,
+  LocalTerra, LCDClient, Wallet, Msg, MsgStoreCode, MsgInstantiateContract,
+  Fee, Int, Dec, Numeric, Coin, Coins, isTxError, WebSocketClient,
 } from '@terra-money/terra.js';
 import { getMnemonicKey, TestAccountName } from './testAccounts';
 import TxResult from './txResult';
@@ -165,6 +165,13 @@ export async function queryNativeTokenBalance(
   return '0';
 }
 
+/**
+ * Upload WASM bytecode to chain and receive a codeId back
+ * @param  client the LCDClient
+ * @param  deployer the wallet that uploads the code also referred to as the creator
+ * @param  filepath path to WASM file
+ * @return codeId as a number
+ */
 export async function storeCode(
   client: LCDClient,
   deployer: Wallet,
@@ -173,5 +180,24 @@ export async function storeCode(
   const bytecode = fs.readFileSync(filepath).toString('base64');
   const storeMsg = new MsgStoreCode(deployer.key.accAddress, bytecode);
   const txResult = await sendTransaction(client, deployer, storeMsg);
-  return txResult.getAttributes('store_code', 'code_id')[0];
+  return parseInt(txResult.getAttributeValue('store_code', 'code_id')[0], 10);
+}
+
+export async function instantiateContract(
+  client: LCDClient,
+  deployer: Wallet,
+  codeId: number,
+  initMsg: string | object,
+  initCoins?: Coins.Input,
+  admin?: string,
+) {
+  const instMsg = new MsgInstantiateContract(
+    deployer.key.accAddress,
+    admin,
+    codeId,
+    initMsg,
+    initCoins,
+  );
+  const result = await sendTransaction(client, deployer, instMsg);
+  return result.getAttributeValue('instantiate_contract', 'contract_address')[0];
 }

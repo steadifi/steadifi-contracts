@@ -6,10 +6,41 @@ import glob from 'glob'
 import path from 'path';
 import compose from 'docker-compose';
 import Context from './utils/context';
-import { buildArtifacts, storeCode, listenForBlockAtHeight } from './utils/utils';
+import { buildArtifacts, storeCode, instantiateContract, listenForBlockAtHeight } from './utils/utils';
 /* eslint-enable */
 
 /* eslint-disable no-console */
+
+async function maybeDeployContracts() {
+  const ctx = Context.instance();
+  if (process.env.ARTIFACTS_PATH) {
+    const artifactsPath = path.resolve(path.normalize(process.env.ARTIFACTS_PATH));
+    const wasmPaths = glob.sync(`${artifactsPath}/**/*.wasm`);
+    const wallet = ctx.getTestWallet('test1');
+    for (let i = 0; i < wasmPaths.length; i++) {
+      const fullpath = path.resolve(path.normalize(wasmPaths[i]));
+      console.log(`Storing bytecode from ${fullpath}`);
+      /* eslint-disable-next-line no-await-in-loop */
+      const codeId = await storeCode(ctx.client, wallet, fullpath);
+      ctx.addCodeInfo(codeId, fullpath);
+    }
+  }
+}
+
+async function instantiateContracts() {
+  const ctx = Context.instance();
+  const wallet = ctx.getTestWallet('test1');
+
+  const { codeId } = ctx.getCodeInfo('collateral_manager');
+  const contractAddress = await instantiateContract(
+    ctx.client,
+    wallet,
+    codeId,
+    {},
+  );
+  ctx.addContractInfo('collateral_manager', contractAddress, '_main');
+}
+
 export default async () => {
   console.log('');
 
@@ -34,18 +65,8 @@ export default async () => {
 
   await listenForBlockAtHeight(1);
 
-  if (process.env.ARTIFACTS_PATH) {
-    const artifactsPath = path.resolve(path.normalize(process.env.ARTIFACTS_PATH));
-    const wasmPaths = glob.sync(`${artifactsPath}/**/*.wasm`);
-    const wallet = ctx.getTestWallet('test1');
-    for (let i = 0; i < wasmPaths.length; i++) {
-      const fullpath = path.resolve(path.normalize(wasmPaths[i]));
-      console.log(`Storing bytecode from ${fullpath}`);
-      /* eslint-disable-next-line no-await-in-loop */
-      const codeId = await storeCode(ctx.client, wallet, fullpath);
-      ctx.addCodeInfo(codeId, fullpath);
-    }
-  }
+  await maybeDeployContracts();
+  await instantiateContracts();
 
   ctx.toFile();
 };

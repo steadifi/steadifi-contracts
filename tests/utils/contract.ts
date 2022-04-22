@@ -1,14 +1,10 @@
 /* eslint-disable max-classes-per-file */
 import path from 'path';
 
-// TODO: Add address field
-// TODO: Get InitMsg (e.g how the contract was instantiated)
-// TODO: Maybe add functionality to parse and print JSON expected format
-
 export class CodeInfo {
   #data: CodeInfo.Data;
 
-  constructor(codeId:string, wasmPath:string) {
+  constructor(codeId:number, wasmPath:string) {
     const data: CodeInfo.Data = { codeId, wasmPath: path.resolve(path.normalize(wasmPath)) };
     this.#data = data;
   }
@@ -52,22 +48,53 @@ export class CodeInfo {
 /* eslint-disable-next-line no-redeclare */
 export namespace CodeInfo {
   export interface Data {
-    codeId: string,
+    codeId: number,
     wasmPath: string
   }
 }
 
-export class Contract {
-  #codeInfo: CodeInfo;
+export class ContractInfo {
+  #data: ContractInfo.Data;
 
-  constructor(codeInfo: CodeInfo) {
-    this.#codeInfo = codeInfo;
+  constructor(identifier: string, codeId: number, contractAddress: string) {
+    this.#data = { identifier, codeId, contractAddress };
   }
 
   /**
-   * @return a CodeInfo object
+   * @return the codeId used by this contract
    */
-  public get codeInfo() {
-    return this.#codeInfo;
+  public get identifier() {
+    return this.#data.identifier;
+  }
+
+  /**
+   * @return the codeId used by this contract
+   */
+  public get codeId() {
+    return this.#data.codeId;
+  }
+
+  /**
+   * @return the codeId used by this contract
+   */
+  public get contractAddress() {
+    return this.#data.contractAddress;
+  }
+
+  public toData() {
+    return this.#data;
+  }
+
+  public static fromData(data: ContractInfo.Data) {
+    return new this(data.identifier, data.codeId, data.contractAddress);
+  }
+}
+
+/* eslint-disable-next-line no-redeclare */
+export namespace ContractInfo {
+  export interface Data {
+    identifier: string,
+    codeId: number,
+    contractAddress: string,
   }
 }
