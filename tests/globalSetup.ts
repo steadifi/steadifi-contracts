@@ -30,6 +30,7 @@ async function maybeDeployContracts() {
 async function instantiateContracts() {
   const ctx = Context.instance();
   const wallet = ctx.getTestWallet('test1');
+  const user = ctx.getTestWallet('test2');
 
   const { codeId } = ctx.getCodeInfo('collateral_manager');
   const contractAddress = await instantiateContract(
@@ -39,6 +40,21 @@ async function instantiateContracts() {
     {},
   );
   ctx.addContractInfo('collateral_manager', contractAddress, '_main');
+
+  const cw20CodeId = ctx.getCodeInfo('cw20_base').codeId;
+  const cw20ContractAddr = await instantiateContract(
+    ctx.client,
+    wallet,
+    cw20CodeId,
+    {
+      decimals: 0,
+      name: 'Andreas Coin',
+      symbol: 'ANDR',
+      mint: { minter: wallet.key.accAddress },
+      initial_balances: [{ address: user.key.accAddress, amount: '1000' }],
+    },
+  );
+  ctx.addContractInfo('cw20_base', cw20ContractAddr, '_ANDR');
 }
 
 export default async () => {

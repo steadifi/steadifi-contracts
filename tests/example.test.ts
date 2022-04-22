@@ -1,5 +1,5 @@
 import { MsgSend, Int } from '@terra-money/terra.js';
-import { sendTransaction, queryNativeTokenBalance } from './utils/utils';
+import { sendTransaction, queryNativeTokenBalance, queryTokenBalance } from './utils/utils';
 import Context from './utils/context';
 
 it('sends transaction', async () => {
@@ -22,13 +22,31 @@ it('sends transaction', async () => {
   expect(sender.key.accAddress).toEqual(senderAddress);
 });
 
-it('gets deployer of contract', async () => {
+it('gets deployer and creator of two contracts', async () => {
   const ctx = Context.instance();
   const wallet = ctx.getTestWallet('test1');
   const { codeId } = ctx.getCodeInfo('collateral_manager');
   const deployer = (await ctx.client.wasm.codeInfo(codeId)).creator;
   expect(wallet.key.accAddress).toEqual(deployer);
+
+  const tokenAddress = ctx.getContractInfo('cw20_base_ANDR').contractAddress;
+  const response = await ctx.client.wasm.contractInfo(tokenAddress);
+
+  expect(response.init_msg.symbol).toEqual('ANDR');
+  expect(response.creator).toEqual(wallet.key.accAddress);
 });
 
-// TODO: Check wrong person cannot do stuff
-// TODO: Check wrong person cannot migrate
+it('queries CW20 balance', async () => {
+  const ctx = Context.instance();
+  const user = ctx.getTestWallet('test2');
+
+  const andrToken = ctx.getContractInfo('cw20_base_ANDR').contractAddress;
+
+  const balance = await queryTokenBalance(ctx.client, user, andrToken);
+  expect(balance).toEqual('1000');
+});
+
+// TODO: send ANDR token
+// TODO: mint ANDR token
+// TODO: check wrong wallet cannot mint ANDR token
+// TODO: Check wrong wallet cannot migrate

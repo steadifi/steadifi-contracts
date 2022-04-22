@@ -1,4 +1,3 @@
-// query contract
 // execute functions of contract
 // Transfer ownership of contract
 // Make contract use different code by changing the code ID (aka migrating)
@@ -143,7 +142,6 @@ export async function sendTransaction(
  * @param  account the account to check. Can be either a string of the address
  * or a Wallet object
  * @param  denom the symbol of the token e.g. 'uluna' or 'uust'
- * @return         [description]
  */
 export async function queryNativeTokenBalance(
   client: LCDClient,
@@ -183,6 +181,16 @@ export async function storeCode(
   return parseInt(txResult.getAttributeValue('store_code', 'code_id')[0], 10);
 }
 
+/**
+ * Instantiate a contract
+ * @param  client the LCDClient
+ * @param  deployer the wallet that instantiates the contract and send the transaction
+ * @param  codeId which contract to instantiate
+ * @param  initMsg parameters to instantiate contract with
+ * @param  initCoins coins to send to contract on instantiation (optional)
+ * @param  admin an address to set as admin/owner. This account can migrate the contract
+ * @return the contract address
+ */
 export async function instantiateContract(
   client: LCDClient,
   deployer: Wallet,
@@ -200,4 +208,43 @@ export async function instantiateContract(
   );
   const result = await sendTransaction(client, deployer, instMsg);
   return result.getAttributeValue('instantiate_contract', 'contract_address')[0];
+}
+
+/**
+ * Query a contract
+ */
+export async function queryContract(
+  client: LCDClient,
+  contractAddress:string,
+  queryMsg:string|object,
+) {
+  const result = await client.wasm.contractQuery(contractAddress, queryMsg);
+  return result;
+}
+
+/**
+ * Query balance of CW20 token
+ * @param  client the LCDClient
+ * @param  account the account to check. Can be either a string of the address
+ * or a Wallet object
+ * @param  tokenContract address of CW20 contract
+ * @return balance as a string
+ */
+export async function queryTokenBalance(
+  client:LCDClient,
+  account: Wallet|string,
+  tokenContract:string,
+) {
+  let address: string;
+  if (isWallet(account)) {
+    address = account.key.accAddress;
+  } else {
+    address = account;
+  }
+
+  const response = await client.wasm.contractQuery<{ balance: string }>(
+    tokenContract,
+    { balance: { address } },
+  );
+  return response.balance;
 }
