@@ -298,11 +298,12 @@ export async function sendNativeTokens(
 }
 
 /**
- * Send native tokens such as uluna
+ * Send CW20 tokens
  * @param  client the LCDClient
  * @param  sender the sender wallet
  * @param  receiver the receiver address
- * @param  amount amount to send e.g '100uluna'
+ * @param  amount amount to send e.g '100'
+ * @param  tokenAddr the address of the token/cw20 contract
  * @return the result of the transaction wrapped in TxResult
  */
 export async function sendCW20Tokens(
