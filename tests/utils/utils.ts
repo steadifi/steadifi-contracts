@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import {
-  LocalTerra, LCDClient, Wallet, Msg, MsgStoreCode, MsgInstantiateContract,
+  LocalTerra, LCDClient, Wallet, Msg, MsgStoreCode, MsgInstantiateContract, MsgExecuteContract,
   Fee, Int, Dec, Numeric, Coin, Coins, isTxError, WebSocketClient,
 } from '@terra-money/terra.js';
 import { getMnemonicKey, TestAccountName } from './testAccounts';
@@ -129,7 +129,7 @@ export async function sendTransaction(
   const txResult = await client.tx.broadcast(tx);
 
   if (isTxError(txResult)) {
-    throw new Error(`Transaction failed! Here is the raw TX result object:\n${JSON.stringify(txResult)}`);
+    throw new Error(`Transaction failed! Here is the raw TX result object:\n${JSON.stringify(txResult, null, 2)}`);
   }
 
   return new TxResult(txResult);
@@ -208,6 +208,32 @@ export async function instantiateContract(
   );
   const result = await sendTransaction(client, deployer, instMsg);
   return result.getAttributeValue('instantiate_contract', 'contract_address')[0];
+}
+
+/**
+ * Executes a contract function
+ * @param  client the LCDClient
+ * @param  sender the wallet that sends the execute transactions
+ * @param  contractAddress which contract to send the execute instruction to
+ * @param  execMsg the message to execute
+ * @param  coins coins to send to contract
+ * @return the transaction result wrapped in TxResult
+ */
+export async function executeContract(
+  client: LCDClient,
+  sender: Wallet,
+  contractAddress: string,
+  execMsg: string|object,
+  coins?: Coins.Input,
+) {
+  const execMsgObj = new MsgExecuteContract(
+    sender.key.accAddress,
+    contractAddress,
+    execMsg,
+    coins,
+  );
+  const result = await sendTransaction(client, sender, execMsgObj);
+  return result;
 }
 
 /**

@@ -1,5 +1,7 @@
 import { MsgSend, Int } from '@terra-money/terra.js';
-import { sendTransaction, queryNativeTokenBalance, queryTokenBalance } from './utils/utils';
+import {
+  sendTransaction, queryNativeTokenBalance, queryTokenBalance, executeContract,
+} from './utils/utils';
 import Context from './utils/context';
 
 it('sends transaction', async () => {
@@ -46,7 +48,64 @@ it('queries CW20 balance', async () => {
   expect(balance).toEqual('1000');
 });
 
-// TODO: send ANDR token
-// TODO: mint ANDR token
-// TODO: check wrong wallet cannot mint ANDR token
+it('sends CW20 tokens', async () => {
+  const ctx = Context.instance();
+  const sender = ctx.getTestWallet('test2');
+  const receiver = ctx.getTestWallet('test1');
+  const tokenAddr = ctx.getContractInfo('cw20_base_ANDR').contractAddress;
+
+  const balanceSenderBefore = new Int(await queryTokenBalance(ctx.client, sender, tokenAddr));
+  const balanceReceiverBefore = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
+  const tx = await executeContract(ctx.client, sender, tokenAddr, {
+    transfer: {
+      amount: '100',
+      recipient: receiver.key.accAddress,
+    },
+  });
+  const balanceSenderAfter = new Int(await queryTokenBalance(ctx.client, sender, tokenAddr));
+  const balanceReceiverAfter = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
+
+  expect(balanceSenderAfter).toEqual(balanceSenderBefore.sub(100));
+  expect(balanceReceiverAfter).toEqual(balanceReceiverBefore.add(100));
+  expect(tx.getAttributeValue('wasm', 'amount')[0]).toEqual('100');
+});
+
+it('mints CW20 tokens', async () => {
+  const ctx = Context.instance();
+  const minter = ctx.getTestWallet('test1');
+  const receiver = ctx.getTestWallet('test2');
+  const tokenAddr = ctx.getContractInfo('cw20_base_ANDR').contractAddress;
+
+  const balanceReceiverBefore = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
+  await executeContract(ctx.client, minter, tokenAddr, {
+    mint: {
+      amount: '100',
+      recipient: receiver.key.accAddress,
+    },
+  });
+  const balanceReceiverAfter = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
+
+  expect(balanceReceiverAfter).toEqual(balanceReceiverBefore.add(100));
+});
+
+it('fails to mint CW20 tokens', async () => {
+  const ctx = Context.instance();
+  const wrongMinter = ctx.getTestWallet('test3');
+  const receiver = ctx.getTestWallet('test2');
+  const tokenAddr = ctx.getContractInfo('cw20_base_ANDR').contractAddress;
+
+  const balanceReceiverBefore = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
+  const promise = executeContract(ctx.client, wrongMinter, tokenAddr, {
+    mint: {
+      amount: '100',
+      recipient: receiver.key.accAddress,
+    },
+  });
+  // IMPORTANT: expect(promise) needs to have an *await*, otherwise the test will always succeed!
+  await expect(promise).rejects.toThrow();
+  const balanceReceiverAfter = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
+
+  expect(balanceReceiverAfter).toEqual(balanceReceiverBefore);
+});
+
 // TODO: Check wrong wallet cannot migrate
