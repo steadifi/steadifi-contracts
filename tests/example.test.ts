@@ -1,6 +1,6 @@
-import { MsgSend, Int } from '@terra-money/terra.js';
+import { Int } from '@terra-money/terra.js';
 import {
-  sendTransaction, queryNativeTokenBalance, queryTokenBalance, executeContract,
+  queryNativeTokenBalance, queryTokenBalance, executeContract, sendNativeTokens,
 } from './utils/utils';
 import Context from './utils/context';
 
@@ -9,10 +9,9 @@ it('sends transaction', async () => {
   const sender = ctx.getTestWallet('test1');
   const receiver = ctx.getTestWallet('test2');
 
-  const msg = new MsgSend(sender.key.accAddress, receiver.key.accAddress, '1000000uluna');
   const balanceSenderBefore = new Int(await queryNativeTokenBalance(ctx.client, sender, 'uluna'));
   const balanceReceiverBefore = new Int(await queryNativeTokenBalance(ctx.client, receiver, 'uluna'));
-  const tx = await sendTransaction(ctx.client, sender, msg);
+  const tx = await sendNativeTokens(ctx.client, sender, receiver, '1000000uluna');
   const balanceSenderAfter = new Int(await queryNativeTokenBalance(ctx.client, sender, 'uluna'));
   const balanceReceiverAfter = new Int(await queryNativeTokenBalance(ctx.client, receiver, 'uluna'));
 

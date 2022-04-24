@@ -1,12 +1,9 @@
-// execute functions of contract
-// Transfer ownership of contract
-// Make contract use different code by changing the code ID (aka migrating)
-// Query non-native token balance
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import {
-  LocalTerra, LCDClient, Wallet, Msg, MsgStoreCode, MsgInstantiateContract, MsgExecuteContract,
+  LocalTerra, LCDClient, Wallet,
+  Msg, MsgSend, MsgStoreCode, MsgInstantiateContract, MsgExecuteContract,
   Fee, Int, Dec, Numeric, Coin, Coins, isTxError, WebSocketClient,
 } from '@terra-money/terra.js';
 import { getMnemonicKey, TestAccountName } from './testAccounts';
@@ -273,4 +270,29 @@ export async function queryTokenBalance(
     { balance: { address } },
   );
   return response.balance;
+}
+
+/**
+ * Send native tokens such as uluna
+ * @param  client the LCDClient
+ * @param  sender the sender wallet
+ * @param  receiver the receiver address
+ * @param  amount amount to send e.g '100uluna'
+ * @return the result of the transaction wrapped in TxResult
+ */
+export async function sendNativeTokens(
+  client:LCDClient,
+  sender:Wallet,
+  receiver: Wallet|string,
+  amount:Coins.Input,
+) {
+  let receiverAddr: string;
+  if (isWallet(receiver)) {
+    receiverAddr = receiver.key.accAddress;
+  } else {
+    receiverAddr = receiver;
+  }
+  const msg = new MsgSend(sender.key.accAddress, receiverAddr, amount);
+  const tx = await sendTransaction(client, sender, msg);
+  return tx;
 }
