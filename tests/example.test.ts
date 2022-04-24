@@ -1,6 +1,6 @@
 import { Int } from '@terra-money/terra.js';
 import {
-  queryNativeTokenBalance, queryTokenBalance, executeContract, sendNativeTokens,
+  queryNativeTokenBalance, queryTokenBalance, executeContract, sendNativeTokens, sendCW20Tokens,
 } from './utils/utils';
 import Context from './utils/context';
 
@@ -55,12 +55,7 @@ it('sends CW20 tokens', async () => {
 
   const balanceSenderBefore = new Int(await queryTokenBalance(ctx.client, sender, tokenAddr));
   const balanceReceiverBefore = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
-  const tx = await executeContract(ctx.client, sender, tokenAddr, {
-    transfer: {
-      amount: '100',
-      recipient: receiver.key.accAddress,
-    },
-  });
+  const tx = await sendCW20Tokens(ctx.client, sender, receiver, '100', tokenAddr);
   const balanceSenderAfter = new Int(await queryTokenBalance(ctx.client, sender, tokenAddr));
   const balanceReceiverAfter = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
 
