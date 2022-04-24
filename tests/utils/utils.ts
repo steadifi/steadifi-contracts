@@ -296,3 +296,34 @@ export async function sendNativeTokens(
   const tx = await sendTransaction(client, sender, msg);
   return tx;
 }
+
+/**
+ * Send native tokens such as uluna
+ * @param  client the LCDClient
+ * @param  sender the sender wallet
+ * @param  receiver the receiver address
+ * @param  amount amount to send e.g '100uluna'
+ * @return the result of the transaction wrapped in TxResult
+ */
+export async function sendCW20Tokens(
+  client:LCDClient,
+  sender:Wallet,
+  receiver: Wallet|string,
+  amount:Numeric.Input,
+  tokenAddr:string,
+) {
+  let receiverAddr: string;
+  if (isWallet(receiver)) {
+    receiverAddr = receiver.key.accAddress;
+  } else {
+    receiverAddr = receiver;
+  }
+
+  const tx = await executeContract(client, sender, tokenAddr, {
+    transfer: {
+      amount: amount.toString(),
+      recipient: receiverAddr,
+    },
+  });
+  return tx;
+}
