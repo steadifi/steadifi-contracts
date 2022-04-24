@@ -13,6 +13,13 @@ function isWallet(obj: Wallet | string): obj is Wallet {
   return (obj as Wallet).key !== undefined;
 }
 
+function getAddress(obj: Wallet | string): string {
+  if (isWallet(obj)) {
+    return obj.key.accAddress;
+  }
+  return obj;
+}
+
 /**
  * Creates an LCDClient based on environment variables defined. If USE_LOCAL_DEFAULT
  * is set to TRUE, a LocalTerra instance is returned (which is also an LCDClient).
@@ -145,12 +152,7 @@ export async function queryNativeTokenBalance(
   account: Wallet | string,
   denom: string = 'uusd',
 ) {
-  let address: string;
-  if (isWallet(account)) {
-    address = account.key.accAddress;
-  } else {
-    address = account;
-  }
+  const address = getAddress(account);
 
   const [coins] = (await client.bank.balance(address));
   const coin = coins.get(denom);
@@ -258,12 +260,7 @@ export async function queryTokenBalance(
   account: Wallet|string,
   tokenContract:string,
 ) {
-  let address: string;
-  if (isWallet(account)) {
-    address = account.key.accAddress;
-  } else {
-    address = account;
-  }
+  const address = getAddress(account);
 
   const response = await client.wasm.contractQuery<{ balance: string }>(
     tokenContract,
@@ -286,12 +283,8 @@ export async function sendNativeTokens(
   receiver: Wallet|string,
   amount:Coins.Input,
 ) {
-  let receiverAddr: string;
-  if (isWallet(receiver)) {
-    receiverAddr = receiver.key.accAddress;
-  } else {
-    receiverAddr = receiver;
-  }
+  const receiverAddr = getAddress(receiver);
+
   const msg = new MsgSend(sender.key.accAddress, receiverAddr, amount);
   const tx = await sendTransaction(client, sender, msg);
   return tx;
@@ -313,15 +306,37 @@ export async function sendCW20Tokens(
   amount:Numeric.Input,
   tokenAddr:string,
 ) {
-  let receiverAddr: string;
-  if (isWallet(receiver)) {
-    receiverAddr = receiver.key.accAddress;
-  } else {
-    receiverAddr = receiver;
-  }
+  const receiverAddr = getAddress(receiver);
 
   const tx = await executeContract(client, sender, tokenAddr, {
     transfer: {
+      amount: amount.toString(),
+      recipient: receiverAddr,
+    },
+  });
+  return tx;
+}
+
+/**
+ * Mint CW20 tokens
+ * @param  client the LCDClient
+ * @param  minter the minter wallet
+ * @param  receiver the receiver address
+ * @param  amount amount to mint e.g '100'
+ * @param  tokenAddr the address of the token/cw20 contract
+ * @return the result of the transaction wrapped in TxResult
+ */
+export async function mintCW20Tokens(
+  client:LCDClient,
+  minter:Wallet,
+  receiver: Wallet|string,
+  amount:Numeric.Input,
+  tokenAddr:string,
+) {
+  const receiverAddr = getAddress(receiver);
+
+  const tx = await executeContract(client, minter, tokenAddr, {
+    mint: {
       amount: amount.toString(),
       recipient: receiverAddr,
     },

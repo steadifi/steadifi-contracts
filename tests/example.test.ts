@@ -1,6 +1,7 @@
 import { Int } from '@terra-money/terra.js';
 import {
-  queryNativeTokenBalance, queryTokenBalance, executeContract, sendNativeTokens, sendCW20Tokens,
+  queryNativeTokenBalance, queryTokenBalance,
+  sendNativeTokens, sendCW20Tokens, mintCW20Tokens,
 } from './utils/utils';
 import Context from './utils/context';
 
@@ -71,12 +72,7 @@ it('mints CW20 tokens', async () => {
   const tokenAddr = ctx.getContractInfo('cw20_base_ANDR').contractAddress;
 
   const balanceReceiverBefore = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
-  await executeContract(ctx.client, minter, tokenAddr, {
-    mint: {
-      amount: '100',
-      recipient: receiver.key.accAddress,
-    },
-  });
+  await mintCW20Tokens(ctx.client, minter, receiver, '100', tokenAddr);
   const balanceReceiverAfter = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
 
   expect(balanceReceiverAfter).toEqual(balanceReceiverBefore.add(100));
@@ -89,12 +85,7 @@ it('fails to mint CW20 tokens', async () => {
   const tokenAddr = ctx.getContractInfo('cw20_base_ANDR').contractAddress;
 
   const balanceReceiverBefore = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
-  const promise = executeContract(ctx.client, wrongMinter, tokenAddr, {
-    mint: {
-      amount: '100',
-      recipient: receiver.key.accAddress,
-    },
-  });
+  const promise = mintCW20Tokens(ctx.client, wrongMinter, receiver, '100', tokenAddr);
   // IMPORTANT: expect(promise) needs to have an *await*, otherwise the test will always succeed!
   await expect(promise).rejects.toThrow();
   const balanceReceiverAfter = new Int(await queryTokenBalance(ctx.client, receiver, tokenAddr));
