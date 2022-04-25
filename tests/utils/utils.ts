@@ -127,7 +127,6 @@ export async function sendTransaction(
   const tx = await sender.createAndSignTx({
     msgs: msgsFlat,
     fee: fixedFee,
-    memo: 'Hello',
   });
 
   const txResult = await client.tx.broadcast(tx);
