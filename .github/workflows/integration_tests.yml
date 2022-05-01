@@ -44,6 +44,9 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+    - name: Create docker volume cache location
+      run: mkdir -p ~/docker_volumes
+
     - name: Saving docker volumes
       uses: actions/cache@v2
       with:
