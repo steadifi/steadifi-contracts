@@ -44,15 +44,18 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+    - name: Change permissions of docker volumes
+      run: sudo chmod -R 777 /var/lib/docker
+
     - name: Saving docker volumes
       uses: actions/cache@v2
       with:
         path: |
           /var/lib/docker/volumes/${{ github.event.repository.name }}_cache
           /var/lib/docker/volumes/registry_cache
-        key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-docker-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
-                      ${{ runner.os }}-sccache-
+                      ${{ runner.os }}-docker-
 
     # In this step, this action saves a list of existing images,
     # the cache is created without them in the post run.
