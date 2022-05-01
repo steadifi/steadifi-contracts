@@ -17,7 +17,7 @@ jobs:
       run:
         working-directory: ./tests
     env:
-      USE_LOCAL_DEFAULT: TRUE
+      USE_LOCAL_DEFAULT: 'TRUE'
       LOCALTERRA_PATH: ./LocalTerra
       SCRIPTS_PATH: ../scripts
       ARTIFACTS_PATH: ../artifacts
@@ -34,8 +34,6 @@ jobs:
 
     - name: Checking out repository
       uses: actions/checkout@v3
-
-    - run: $GITHUB_WORKSPACE/scripts/build_release.sh
 
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
