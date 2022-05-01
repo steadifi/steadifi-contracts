@@ -18,9 +18,6 @@ jobs:
       LOCALTERRA_PATH: ./LocalTerra
       SCRIPTS_PATH: ../scripts
       ARTIFACTS_PATH: ../artifacts
-    defaults:
-      run:
-        working-directory: ./tests
     strategy:
       matrix:
         node-version: [17.x]
@@ -34,6 +31,8 @@ jobs:
 
     - name: Checking out repository
       uses: actions/checkout@v3
+
+    - run: cd tests
 
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
