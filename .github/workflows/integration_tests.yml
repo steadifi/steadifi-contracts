@@ -58,6 +58,7 @@ jobs:
     - name: Copy docker volumes to correct location
       run: |
         sudo cp -f -R ~/docker_volumes/* /var/lib/docker/volumes/.
+      continue-on-error: true
 
     # In this step, this action saves a list of existing images,
     # the cache is created without them in the post run.
