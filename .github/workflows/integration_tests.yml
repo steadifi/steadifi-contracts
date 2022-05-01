@@ -13,9 +13,6 @@ jobs:
   build:
     name: Testing pipeline
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./tests
     env:
       USE_LOCAL_DEFAULT: 'TRUE'
       LOCALTERRA_PATH: ./LocalTerra
@@ -35,22 +32,57 @@ jobs:
     - name: Checking out repository
       uses: actions/checkout@v3
 
+    ################## Caching ######################
+    - name: Caching cargo paths
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Saving sccache
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/sccache
+        key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+                      ${{ runner.os }}-sccache-
+
+    # In this step, this action saves a list of existing images,
+    # the cache is created without them in the post run.
+    # It also restores the cache if it exists.
+    - name: Caching docker layers
+      uses: satackey/action-docker-layer-caching@v0.0.11
+      # Ignore the failure of a step and avoid terminating the job.
+      continue-on-error: true
+
+    ##################################################
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
         cache-dependency-path: tests/package-lock.json
+      working-directory: ./tests
 
     - run: npm ci
+      working-directory: ./tests
 
     - name: Linting tests...
       run: npm run lint
+      working-directory: ./tests
 
     - name: Cloning LocalTerra...
       run: |
         git clone --depth 1 https://github.com/terra-money/LocalTerra.git
         sed -E -i '/timeout_(propose|prevote|precommit|commit)/s/[0-9]+m?s/200ms/' LocalTerra/config/config.toml
+      working-directory: ./tests
 
     - name: Running integration tests
       run: npm test
+      working-directory: ./tests
