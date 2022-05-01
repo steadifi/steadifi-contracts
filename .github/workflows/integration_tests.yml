@@ -1,0 +1,102 @@
+name: Integration tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Testing pipeline
+    runs-on: ubuntu-latest
+    env:
+      USE_LOCAL_DEFAULT: 'TRUE'
+      LOCALTERRA_PATH: ./LocalTerra
+      SCRIPTS_PATH: ../scripts
+      ARTIFACTS_PATH: ../artifacts
+    strategy:
+      matrix:
+        node-version: [16.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - name: Cancelling previous runs
+      uses: styfle/cancel-workflow-action@0.9.1
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checking out repository
+      uses: actions/checkout@v3
+
+    ################## Caching ######################
+    - name: Caching cargo paths
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Create docker volume cache location
+      run: mkdir -p ~/docker_volumes
+
+    - name: Saving docker volumes
+      uses: actions/cache@v2
+      with:
+        path: ~/docker_volumes
+        key: ${{ runner.os }}-dockervolume-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+                      ${{ runner.os }}-dockervolume-
+
+    - name: Copy docker volumes to correct location
+      run: |
+        sudo cp -f -R ~/docker_volumes/* /var/lib/docker/volumes/.
+      continue-on-error: true
+
+    # In this step, this action saves a list of existing images,
+    # the cache is created without them in the post run.
+    # It also restores the cache if it exists.
+    - name: Caching docker layers
+      uses: satackey/action-docker-layer-caching@v0.0.11
+      # Ignore the failure of a step and avoid terminating the job.
+      continue-on-error: true
+
+    ##################################################
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: tests/package-lock.json
+
+    - run: npm ci
+      working-directory: ./tests
+
+    - name: Linting tests...
+      run: npm run lint
+      working-directory: ./tests
+
+    - name: Cloning LocalTerra...
+      run: |
+        git clone --depth 1 https://github.com/terra-money/LocalTerra.git
+        sed -E -i '/timeout_(propose|prevote|precommit|commit)/s/[0-9]+m?s/200ms/' LocalTerra/config/config.toml
+      working-directory: ./tests
+
+    - name: Running integration tests
+      run: npm test
+      working-directory: ./tests
+
+    - name: Copy docker volumes for caching
+      run: |
+        mkdir -p ~/docker_volumes
+        sudo cp -f -R /var/lib/docker/volumes/${{ github.event.repository.name }}_cache ~/docker_volumes/.
+        sudo cp -f -R /var/lib/docker/volumes/registry_cache ~/docker_volumes/.
+        sudo chown -R $(id -u):$(id -g) ~/docker_volumes/
