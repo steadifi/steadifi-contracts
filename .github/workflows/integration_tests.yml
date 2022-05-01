@@ -99,3 +99,4 @@ jobs:
         mkdir -p ~/docker_volumes
         sudo cp -f -R /var/lib/docker/volumes/${{ github.event.repository.name }}_cache ~/docker_volumes/.
         sudo cp -f -R /var/lib/docker/volumes/registry_cache ~/docker_volumes/.
+        sudo chown -R 1001:1001 ~/docker_volumes/
