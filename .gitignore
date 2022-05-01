@@ -6,7 +6,6 @@
 
 # Build results
 target/
-Cargo.lock
 
 # IDEs
 .vscode/
