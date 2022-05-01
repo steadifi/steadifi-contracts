@@ -44,10 +44,12 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Saving sccache
+    - name: Saving docker volumes
       uses: actions/cache@v2
       with:
-        path: ~/.cache/sccache
+        path: |
+          /var/lib/docker/volumes/${{ github.event.repository.name }}_cache
+          /var/lib/docker/volumes/registry_cache
         key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
                       ${{ runner.os }}-sccache-
